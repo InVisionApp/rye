@@ -9,7 +9,6 @@ OUTPUT_DIR      = build
 TMP_DIR        := .tmp
 RELEASE_VER    := $(shell git rev-parse --short HEAD)
 DOCKER_IP       = $(shell docker-machine ip)
-MIGRATIONS_DIR  = ./migrations
 NAME            = default
 COVERMODE       = atomic
 
