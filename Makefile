@@ -8,7 +8,6 @@ BIN             = rye
 OUTPUT_DIR      = build
 TMP_DIR        := .tmp
 RELEASE_VER    := $(shell git rev-parse --short HEAD)
-DOCKER_IP       = $(shell docker-machine ip)
 NAME            = default
 COVERMODE       = atomic
 
@@ -65,12 +64,6 @@ build/darwin: clean/darwin ## Build for darwin (save to OUTPUT_DIR/BIN)
 
 generate: ## Run generate for non-vendor packages only
 	go list ./... | xargs go generate
-
-docker: build/linux ## Build local docker image
-	docker build -t $(BIN):$(RELEASE_VER) .
-
-jet: ## Run `jet steps`
-	jet steps
 
 clean: clean/darwin clean/linux ## Remove all build artifacts
 
