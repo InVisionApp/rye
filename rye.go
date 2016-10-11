@@ -13,8 +13,7 @@ import (
 )
 
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
-// this will not work on linux...
-//go:generate sed -i "" s/github.com\/InVisionApp\/rye\/// fakes/statsdfakes/fake_statter.go
+//go:generate perl -pi -e 's/$GOPATH\/src\///g' fakes/statsdfakes/fake_statter.go
 
 // Middleware
 type MWHandler struct {

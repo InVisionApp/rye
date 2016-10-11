@@ -54,24 +54,8 @@ installtools: ## Install development related tools
 	go get github.com/kardianos/govendor
 	go get github.com/maxbrunsfeld/counterfeiter
 
-build: clean build/linux build/darwin ## Build for linux and darwin (save to OUTPUT_DIR/BIN)
-
-build/linux: clean/linux ## Build for linux (save to OUTPUT_DIR/BIN)
-	GOOS=linux go build -a -installsuffix cgo -ldflags "-X main.version=$(RELEASE_VER)" -o $(OUTPUT_DIR)/$(BIN)-linux .
-
-build/darwin: clean/darwin ## Build for darwin (save to OUTPUT_DIR/BIN)
-	GOOS=darwin go build -a -installsuffix cgo -ldflags "-X main.version=$(RELEASE_VER)" -o $(OUTPUT_DIR)/$(BIN)-darwin .
-
 generate: ## Run generate for non-vendor packages only
 	go list ./... | xargs go generate
-
-clean: clean/darwin clean/linux ## Remove all build artifacts
-
-clean/darwin: ## Remove darwin build artifacts
-	$(RM) $(OUTPUT_DIR)/$(BIN)-darwin
-
-clean/linux: ## Remove linux build artifacts
-	$(RM) $(OUTPUT_DIR)/$(BIN)-linux
 
 help: ## Display this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_\/-]+:.*?## / {printf "\033[34m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | \

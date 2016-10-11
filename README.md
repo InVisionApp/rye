@@ -9,7 +9,7 @@ In order to use **rye**, you should vendor it and the **statsd** client within y
 
 ```
 govendor fetch github.com/cactus/go-statsd-client/statsd
-govendor fetch github.com/InVisio`nApp/rye
+govendor fetch github.com/InVisionApp/rye
 ```
 ## Example
 
@@ -22,9 +22,15 @@ import (
 )
 ```
 
-Create a statsd client and a middleware handler. The purpose of the Handler is to keep a reference to the statsd client for gathering metrics and to provide an interface for chaining http handlers.
+Create a statsd client (if desired) and create a rye Config in order to pass in optional dependencies:
+
 ```go
-middlewareHandler := rye.NewMWHandler(statsdClient, DEFAULT_STATSD_RATE)
+config := rye.Config {statsdClient, DEFAULT_STATSD_RATE}
+```
+
+Create a middleware handler. The purpose of the Handler is to keep Config and to provide an interface for chaining http handlers.
+```go
+middlewareHandler := rye.NewMWHandler(config)
 ```
 
 Build your http handlers using the Handler type from **rye**.
@@ -90,8 +96,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to instantiate statsd client: %v", err.Error())
 	}
+	
+	config := rye.Config{statsdClient, DEFAULT_STATSD_RATE}
 
-    middlewareHandler := rye.NewMWHandler(statsdClient, DEFAULT_STATSD_RATE)
+    middlewareHandler := rye.NewMWHandler(config)
 
     routes := mux.NewRouter().StrictSlash(true)
 
@@ -138,12 +146,20 @@ func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.DetailedError {
 
 ## API
 
+### Config
+This struct is configuration for the MWHandler. It holds references and config to dependencies such as the statsdClient.
+```go
+type Config struct {
+	Statter  statsd.Statter
+	StatRate float32
+}
+```
+
 ### MWHandler
 This struct is the primary handler container. It holds references to the statsd client.
 ```go
 type MWHandler struct {
-	Statter  statsd.Statter
-	StatRate float32
+    Config Config
 }
 ```
 #### Constructor
@@ -173,10 +189,10 @@ type Handler func(w http.ResponseWriter, r *http.Request) *DetailedError
 
 
 
-## Build stuff
+## Test stuff
 All interfacing with the project is done via `make`. Targets exist for all primary tasks such as:
 
-- Building: `make build` (or `make build/linux`, `make build/darwin`)
-- Testing: `make test` (or `make test/unit`, `make test/integration`)
+- Testing: `make test` or `make testv` (for verbosity)
+- Generate: `make generate` - this generates based on vendored libraries (from $GOPATH)
 - All (test, build): `make all`
 - .. and a few others. Run `make help` to see all available targets.
