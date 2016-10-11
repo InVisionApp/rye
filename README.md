@@ -25,7 +25,7 @@ import (
 Create a statsd client (if desired) and create a rye Config in order to pass in optional dependencies:
 
 ```go
-config := rye.Config {statsdClient, DEFAULT_STATSD_RATE}
+config := rye.Config{statsdClient, DEFAULT_STATSD_RATE}
 ```
 
 Create a middleware handler. The purpose of the Handler is to keep Config and to provide an interface for chaining http handlers.
