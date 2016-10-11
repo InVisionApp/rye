@@ -9,8 +9,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"time"
 )
 
+type statsInc struct {
+	Name string
+	Time int64
+	StatRate float32
+}
+
+type statsTiming struct {
+	Name string
+	Time time.Duration
+	StatRate float32
+}
 
 var _ = Describe("Rye", func() {
 
@@ -27,7 +39,8 @@ var _ = Describe("Rye", func() {
 
 	BeforeEach(func() {
 		fakeStatter = &statsdfakes.FakeStatter{}
-		mwHandler = NewMWHandler(fakeStatter,STATRATE)
+		ryeConfig := Config{fakeStatter,STATRATE}
+		mwHandler = NewMWHandler(ryeConfig)
 
 		response = httptest.NewRecorder()
 
@@ -41,10 +54,18 @@ var _ = Describe("Rye", func() {
 	Describe("NewMWHandler", func() {
 		Context("when instantiating a mwhandler", func() {
 			It("should have correct attributes", func() {
-				handler := NewMWHandler(fakeStatter, STATRATE)
+				ryeConfig := Config{fakeStatter,STATRATE}
+				handler := NewMWHandler(ryeConfig)
 				Expect(handler).NotTo(BeNil())
-				Expect(handler.Statter).To(Equal(fakeStatter))
-				Expect(handler.StatRate).To(Equal(STATRATE))
+				Expect(handler.Config.Statter).To(Equal(fakeStatter))
+				Expect(handler.Config.StatRate).To(Equal(STATRATE))
+			})
+
+			It("should have attributes with default values when passed an empty config", func() {
+				handler := NewMWHandler(Config{})
+				Expect(handler).NotTo(BeNil())
+				Expect(handler.Config.Statter).To(BeNil())
+				Expect(handler.Config.StatRate).To(Equal(float32(0.0)))
 			})
 		})
 	})
@@ -52,35 +73,95 @@ var _ = Describe("Rye", func() {
 	Describe("Handle", func() {
 		Context("when adding a valid handler", func() {
 			It("should return valid HandlerFunc", func() {
-				successHandler := func(rw http.ResponseWriter, r *http.Request) *DetailedError {
-					os.Setenv("RYE_TEST_HANDLER_PASS", "1")
+
+				var (
+					actualInc statsInc
+					actualTiming statsTiming
+				)
+
+				inc := make(chan statsInc)
+				timing := make(chan statsTiming)
+
+				fakeStatter.IncStub = func(name string, time int64, statrate float32) error {
+					inc <- statsInc{name, time, statrate}
+					close(inc)
+					return nil
+				}
+
+				fakeStatter.TimingDurationStub = func(name string, time time.Duration, statrate float32) error {
+					timing <- statsTiming{name, time, statrate}
+					close(timing)
 					return nil
 				}
 
 				h := mwHandler.Handle([]Handler{successHandler})
 				h.ServeHTTP(response, request)
 
+				actualInc = <-inc
+				actualTiming = <-timing
+
 				Expect(h).ToNot(BeNil())
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
 				Expect(os.Getenv("RYE_TEST_HANDLER_PASS")).To(Equal("1"))
+				Expect(actualInc.Name).To(Equal("handlers.successHandler.2xx"))
+				Expect(actualInc.Time).To(Equal(int64(1)))
+				Expect(actualInc.StatRate).To(Equal(float32(STATRATE)))
+				Expect(actualTiming.Name).To(Equal("handlers.successHandler.runtime"))
+				Expect(actualTiming.StatRate).To(Equal(float32(STATRATE)))
 			})
 		})
 
 		Context("when adding an erroneous handler", func() {
 			It("should interrupt handler chain and set a response status code", func() {
-				failureHandler := func(rw http.ResponseWriter, r *http.Request) *DetailedError {
-					return &DetailedError{
-						StatusCode: 505,
-						Err:      fmt.Errorf("Foo"),
-					}
+
+				var (
+					actualInc statsInc
+					actualTiming statsTiming
+				)
+
+				inc := make(chan statsInc)
+				timing := make(chan statsTiming)
+
+				fakeStatter.IncStub = func(name string, time int64, statrate float32) error {
+					inc <- statsInc{name, time, statrate}
+					close(inc)
+					return nil
+				}
+
+				fakeStatter.TimingDurationStub = func(name string, time time.Duration, statrate float32) error {
+					timing <- statsTiming{name, time, statrate}
+					close(timing)
+					return nil
 				}
 
 				h := mwHandler.Handle([]Handler{failureHandler})
 				h.ServeHTTP(response, request)
 
+				actualInc = <-inc
+				actualTiming = <-timing
+
 				Expect(h).ToNot(BeNil())
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
 				Expect(response.Code).To(Equal(505))
+				Expect(actualInc.Name).To(Equal("handlers.failureHandler.505"))
+				Expect(actualInc.Time).To(Equal(int64(1)))
+				Expect(actualInc.StatRate).To(Equal(float32(STATRATE)))
+				Expect(actualTiming.Name).To(Equal("handlers.failureHandler.runtime"))
+				Expect(actualTiming.StatRate).To(Equal(float32(STATRATE)))
+			})
+		})
+
+		Context("when the statter is not set", func() {
+			It("should not call Inc or TimingDuration", func() {
+
+				ryeConfig := Config{}
+				handler := NewMWHandler(ryeConfig)
+
+				h := handler.Handle([]Handler{successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(fakeStatter.IncCallCount()).To(Equal(0))
+				Expect(fakeStatter.TimingDurationCallCount()).To(Equal(0))
 			})
 		})
 	})
@@ -93,5 +174,17 @@ var _ = Describe("Rye", func() {
 	})
 
 })
+
+func successHandler(rw http.ResponseWriter, r *http.Request) *DetailedError {
+	os.Setenv("RYE_TEST_HANDLER_PASS", "1")
+	return nil
+}
+
+func failureHandler(rw http.ResponseWriter, r *http.Request) *DetailedError {
+	return &DetailedError{
+		StatusCode: 505,
+		Err:      fmt.Errorf("Foo"),
+	}
+}
 
 func testFunc() {}

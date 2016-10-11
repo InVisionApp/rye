@@ -18,8 +18,18 @@ import (
 
 // Middleware
 type MWHandler struct {
+	Config Config
+}
+
+type Config struct {
 	Statter  statsd.Statter
 	StatRate float32
+}
+
+func NewMWHandler(config Config) *MWHandler {
+	return &MWHandler{
+		Config: config,
+	}
 }
 
 type JSONStatus struct {
@@ -37,13 +47,6 @@ func (d *DetailedError) Error() string {
 	return d.Err.Error()
 }
 
-func NewMWHandler(statter statsd.Statter, statrate float32) *MWHandler {
-	return &MWHandler{
-		Statter:  statter,
-		StatRate: statrate,
-	}
-}
-
 //Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
 type Handler func(w http.ResponseWriter, r *http.Request) *DetailedError
 
@@ -57,6 +60,7 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 				statusCode := "2xx"
 				startTime := time.Now()
 
+
 				if err = handler(w, r); err != nil {
 					statusCode = strconv.Itoa(err.StatusCode)
 					WriteJSONStatus(w, "error", err.Error(), err.StatusCode)
@@ -64,19 +68,23 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 
 				handlerName := getFuncName(handler)
 
-				// Record runtime metric
-				go m.Statter.TimingDuration(
-					"handlers."+handlerName+".runtime",
-					time.Since(startTime), // delta
-					m.StatRate,
-				)
+				if m.Config.Statter != nil {
+					// Record runtime metric
+					go m.Config.Statter.TimingDuration(
+						"handlers."+handlerName+".runtime",
+						time.Since(startTime), // delta
+						m.Config.StatRate,
+					)
 
-				// Record status code metric (default 2xx)
-				go m.Statter.Inc(
-					"handlers."+handlerName+"."+statusCode,
-					1,
-					m.StatRate,
-				)
+					// Record status code metric (default 2xx)
+					go m.Config.Statter.Inc(
+						"handlers."+handlerName+"."+statusCode,
+						1,
+						m.Config.StatRate,
+					)
+				}
+
+
 			}()
 
 			// stop executing rest of the handlers if we encounter an error

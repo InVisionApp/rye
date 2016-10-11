@@ -1,3 +1,6 @@
+
+<img align="right" src="rye.gif">
+
 # rye
 A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd timing and status code for use with DataDog or other logging aggregators.
 
@@ -6,7 +9,7 @@ In order to use **rye**, you should vendor it and the **statsd** client within y
 
 ```
 govendor fetch github.com/cactus/go-statsd-client/statsd
-govendor fetch github.com/InVisionApp/rye
+govendor fetch github.com/InVisio`nApp/rye
 ```
 ## Example
 
