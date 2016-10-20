@@ -17,8 +17,17 @@ git clone git@github.com:InVisionApp/rye.git
 
 govendor add github.com/InVisionApp/rye
 ```
-## Example
 
+## Why another middleware lib?
+
+* For one, `rye` is *tiny* - the entire library is <120 lines of code including comments
+* In addition, each middleware gets statsd metrics tracking for free
+* We also wanted to have an easy way to say “run these 2 middlewares on this endpoint, but only one middleware on this endpoint” 
+    * Of course, this is doable with negroni and gorilla-mux, but you’d have to use a subrouter with gorilla, which tends to end up in more code
+* Also, as a bonus, we bundled in some helper methods for standardizing JSON response messages
+* And finally, we created a unified way for handlers and middlewares to return detailed errors (if they chose to do so)
+
+## Example
 Begin by importing the required libraries:
 
 ```go
