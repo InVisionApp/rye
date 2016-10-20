@@ -9,7 +9,13 @@ In order to use **rye**, you should vendor it and the **statsd** client within y
 
 ```
 govendor fetch github.com/cactus/go-statsd-client/statsd
-govendor fetch github.com/InVisionApp/rye
+
+# Rye is a private repo, so we should clone it first
+mkdir -p $GOPATH/github.com/InVisionApp
+cd $GOPATH/github.com/InVisionApp
+git clone git@github.com:InVisionApp/rye.git
+
+govendor add github.com/InVisionApp/rye
 ```
 ## Example
 
@@ -83,21 +89,26 @@ srv.ListenAndServe()
 ```
 ## Full Example
 ```go
+package main
+
 import (
-    "github.com/cactus/go-statsd-client/statsd"
+    "errors"
+    "fmt"
+    "net/http"
+
     "github.com/InVisionApp/rye"
+    log "github.com/Sirupsen/logrus"
+    "github.com/cactus/go-statsd-client/statsd"
+    "github.com/gorilla/mux"
 )
 
-// Config vars omitted (StatsDAddress, StatsDPrefix, flushInterval, DEFAULT_STATSD_RATE, etc
-
 func main() {
+    statsdClient, err := statsd.NewBufferedClient("localhost:12345", "my_service", 1.0, 0)
+    if err != nil {
+        log.Fatalf("Unable to instantiate statsd client: %v", err.Error())
+    }
 
-    statsdClient, err := statsd.NewBufferedClient(StatsDAddress, StatsDPrefix, flushInterval, 0)
-	if err != nil {
-		log.Fatalf("Unable to instantiate statsd client: %v", err.Error())
-	}
-	
-	config := rye.Config{statsdClient, DEFAULT_STATSD_RATE}
+    config := rye.Config{statsdClient, 1.0}
 
     middlewareHandler := rye.NewMWHandler(config)
 
@@ -110,36 +121,40 @@ func main() {
 
     routes.Handle("/error", middlewareHandler.Handle([]rye.Handler{
         middlewareFirstHandler,
+        errorHandler,
         homeHandler,
-        errorHandler
     })).Methods("GET")
 
-    log.Infof("API server listening on %v", ListenAddress)
+    log.Infof("API server listening on %v", "localhost:8181")
 
     srv := &http.Server{
-        Addr:         ListenAddress,
-        Handler:      routes,
-        ReadTimeout:  time.Duration(ReadTimeout) * time.Second,
-        WriteTimeout: time.Duration(WriteTimeout) * time.Second,
+        Addr:    "localhost:8181",
+        Handler: routes,
     }
 
     srv.ListenAndServe()
 }
 
 func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.DetailedError {
-	fmt.Fprint(rw, "Refer to README.md for auth-api API usage")
-	return nil
+    log.Infof("Home handler has fired!")
+
+    fmt.Fprint(rw, "This is the home handler")
+    return nil
 }
 
 func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.DetailedError {
-	fmt.Fprint(rw, "This handler fires first.")
-	return nil
+    log.Infof("Middleware handler has fired!")
+    return nil
 }
 
 func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.DetailedError {
-	return &rye.DetailedError{
-    			StatusCode: http.StatusInternalServerError,
-    			Err:        errors.New(message),
+    log.Infof("Error handler has fired!")
+
+    message := "This is the error handler"
+
+    return &rye.DetailedError{
+        StatusCode: http.StatusInternalServerError,
+        Err:        errors.New(message),
     }
 }
 ```
