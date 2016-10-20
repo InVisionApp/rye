@@ -59,7 +59,6 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 				statusCode := "2xx"
 				startTime := time.Now()
 
-
 				if err = handler(w, r); err != nil {
 					statusCode = strconv.Itoa(err.StatusCode)
 					WriteJSONStatus(w, "error", err.Error(), err.StatusCode)
@@ -82,7 +81,6 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						m.Config.StatRate,
 					)
 				}
-
 
 			}()
 
