@@ -4,33 +4,37 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/InVisionApp/rye/fakes/statsdfakes"
-	"os"
 	"fmt"
+	"github.com/InVisionApp/rye/fakes/statsdfakes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"time"
 )
 
+const (
+	RYE_TEST_HANDLER_ENV_VAR = "RYE_TEST_HANDLER_PASS"
+)
+
 type statsInc struct {
-	Name string
-	Time int64
+	Name     string
+	Time     int64
 	StatRate float32
 }
 
 type statsTiming struct {
-	Name string
-	Time time.Duration
+	Name     string
+	Time     time.Duration
 	StatRate float32
 }
 
 var _ = Describe("Rye", func() {
 
 	var (
-		request  *http.Request
-		response *httptest.ResponseRecorder
-		mwHandler	*MWHandler
-		fakeStatter	*statsdfakes.FakeStatter
+		request     *http.Request
+		response    *httptest.ResponseRecorder
+		mwHandler   *MWHandler
+		fakeStatter *statsdfakes.FakeStatter
 	)
 
 	const (
@@ -39,22 +43,31 @@ var _ = Describe("Rye", func() {
 
 	BeforeEach(func() {
 		fakeStatter = &statsdfakes.FakeStatter{}
-		ryeConfig := Config{fakeStatter,STATRATE}
+		ryeConfig := Config{
+			Statter:  fakeStatter,
+			StatRate: STATRATE,
+		}
 		mwHandler = NewMWHandler(ryeConfig)
 
 		response = httptest.NewRecorder()
+		request = &http.Request{
+			Header: make(map[string][]string, 0),
+		}
 
-		os.Unsetenv("RYE_TEST_HANDLER_PASS")
+		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
 	})
 
 	AfterEach(func() {
-		os.Unsetenv("RYE_TEST_HANDLER_PASS")
+		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
 	})
 
 	Describe("NewMWHandler", func() {
 		Context("when instantiating a mwhandler", func() {
 			It("should have correct attributes", func() {
-				ryeConfig := Config{fakeStatter,STATRATE}
+				ryeConfig := Config{
+					Statter:  fakeStatter,
+					StatRate: STATRATE,
+				}
 				handler := NewMWHandler(ryeConfig)
 				Expect(handler).NotTo(BeNil())
 				Expect(handler.Config.Statter).To(Equal(fakeStatter))
@@ -75,7 +88,7 @@ var _ = Describe("Rye", func() {
 			It("should return valid HandlerFunc", func() {
 
 				var (
-					actualInc statsInc
+					actualInc    statsInc
 					actualTiming statsTiming
 				)
 
@@ -102,7 +115,7 @@ var _ = Describe("Rye", func() {
 
 				Expect(h).ToNot(BeNil())
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
-				Expect(os.Getenv("RYE_TEST_HANDLER_PASS")).To(Equal("1"))
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
 				Expect(actualInc.Name).To(Equal("handlers.successHandler.2xx"))
 				Expect(actualInc.Time).To(Equal(int64(1)))
 				Expect(actualInc.StatRate).To(Equal(float32(STATRATE)))
@@ -111,11 +124,47 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when origin header IS provided", func() {
+			It("should add any CORS related headers to response", func() {
+				// Really, we're just verifying that handleCORS() was executed
+				request.Header.Add("Origin", "*.invisionapp.com")
+
+				h := mwHandler.Handle([]Handler{successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(response.Header().Get("Access-Control-Allow-Origin")).ToNot(Equal(""))
+				Expect(response.Header().Get("Access-Control-Allow-Methods")).ToNot(Equal(""))
+				Expect(response.Header().Get("Access-Control-Allow-Headers")).ToNot(Equal(""))
+			})
+		})
+
+		Context("when origin header IS NOT provided", func() {
+			It("should NOT add CORS related headers to response", func() {
+				h := mwHandler.Handle([]Handler{successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(response.Header().Get("Access-Control-Allow-Origin")).To(Equal(""))
+				Expect(response.Header().Get("Access-Control-Allow-Methods")).To(Equal(""))
+				Expect(response.Header().Get("Access-Control-Allow-Headers")).To(Equal(""))
+			})
+		})
+
+		Context("on an OPTIONS request", func() {
+			It("should NOT reach handler execution", func() {
+				request.Method = "OPTIONS"
+
+				h := mwHandler.Handle([]Handler{successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
+			})
+		})
+
 		Context("when adding an erroneous handler", func() {
 			It("should interrupt handler chain and set a response status code", func() {
 
 				var (
-					actualInc statsInc
+					actualInc    statsInc
 					actualTiming statsTiming
 				)
 
@@ -166,6 +215,47 @@ var _ = Describe("Rye", func() {
 		})
 	})
 
+	Describe("handleCORS", func() {
+		Context("when origin is not set in request", func() {
+			It("should return false", func() {
+				request.Header.Del("Origin")
+
+				state := mwHandler.handleCORS(response, request)
+				Expect(state).To(BeFalse())
+			})
+		})
+
+		Context("when origin is set in request", func() {
+			BeforeEach(func() {
+				request.Header.Add("Origin", "*.invisionapp.com")
+			})
+
+			Context("and Config CORS attributes are set", func() {
+				It("should override default CORS response headers", func() {
+					mwHandler.Config.CORSAllowOrigin = "*"
+					mwHandler.Config.CORSAllowHeaders = "Header1, Header2"
+					mwHandler.Config.CORSAllowMethods = "GET, PUT"
+
+					mwHandler.handleCORS(response, request)
+
+					Expect(response.Header().Get("Access-Control-Allow-Origin")).To(Equal(mwHandler.Config.CORSAllowOrigin))
+					Expect(response.Header().Get("Access-Control-Allow-Methods")).To(Equal(mwHandler.Config.CORSAllowMethods))
+					Expect(response.Header().Get("Access-Control-Allow-Headers")).To(Equal(mwHandler.Config.CORSAllowHeaders))
+				})
+			})
+
+			Context("and Config CORS attributes are NOT set", func() {
+				It("should use default CORS response headers", func() {
+					mwHandler.handleCORS(response, request)
+
+					Expect(response.Header().Get("Access-Control-Allow-Origin")).To(Equal("*.invisionapp.com"))
+					Expect(response.Header().Get("Access-Control-Allow-Methods")).To(Equal(DEFAULT_CORS_ALLOW_METHODS))
+					Expect(response.Header().Get("Access-Control-Allow-Headers")).To(Equal(DEFAULT_CORS_ALLOW_HEADERS))
+				})
+			})
+		})
+	})
+
 	Describe("getFuncName", func() {
 		It("should return the name of the function as a string", func() {
 			funcName := getFuncName(testFunc)
@@ -176,14 +266,14 @@ var _ = Describe("Rye", func() {
 })
 
 func successHandler(rw http.ResponseWriter, r *http.Request) *DetailedError {
-	os.Setenv("RYE_TEST_HANDLER_PASS", "1")
+	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
 	return nil
 }
 
 func failureHandler(rw http.ResponseWriter, r *http.Request) *DetailedError {
 	return &DetailedError{
 		StatusCode: 505,
-		Err:      fmt.Errorf("Foo"),
+		Err:        fmt.Errorf("Foo"),
 	}
 }
 

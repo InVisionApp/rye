@@ -2,7 +2,7 @@
 <img align="right" src="rye.gif">
 
 # rye
-A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd timing and status code for use with DataDog or other logging aggregators.
+A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd metrics for use with DataDog or other logging aggregators and out-of-the-box CORS support.
 
 ## Setup
 In order to use **rye**, you should vendor it and the **statsd** client within your project.
@@ -26,6 +26,7 @@ govendor add github.com/InVisionApp/rye
     * Of course, this is doable with negroni and gorilla-mux, but you’d have to use a subrouter with gorilla, which tends to end up in more code
 * Also, as a bonus, we bundled in some helper methods for standardizing JSON response messages
 * And finally, we created a unified way for handlers and middlewares to return detailed errors (if they chose to do so)
+* Oh yeah and it has built-in support for CORS too!
 
 ## Example
 Begin by importing the required libraries:
@@ -40,7 +41,13 @@ import (
 Create a statsd client (if desired) and create a rye Config in order to pass in optional dependencies:
 
 ```go
-config := rye.Config{statsdClient, DEFAULT_STATSD_RATE}
+config := &rye.Config{
+        Statter:          statsdClient,
+        StatRate:         DEFAULT_STATSD_RATE,
+        CORSAllowOrigin:  "*.invisionapp.com",                    // OPTIONAL
+        CORSAllowMethods: "PUT, GET, DELETE",                     // OPTIONAL
+        CORSAllowHeaders: "Accept, Content-Type, Content-Length", // OPTIONAL
+}
 ```
 
 Create a middleware handler. The purpose of the Handler is to keep Config and to provide an interface for chaining http handlers.
@@ -171,13 +178,28 @@ func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.DetailedError {
 ## API
 
 ### Config
-This struct is configuration for the MWHandler. It holds references and config to dependencies such as the statsdClient.
+This struct is configuration for the MWHandler. It holds references and config to dependencies such as the statsdClient and CORS related settings.
 ```go
 type Config struct {
-	Statter  statsd.Statter
-	StatRate float32
+    Statter          statsd.Statter
+    StatRate         float32
+    CORSAllowOrigin  string
+    CORSAllowMethods string
+    CORSAllowHeaders string
 }
 ```
+
+### CORS
+`rye` supports CORS! When instantiating `Config`, if you do NOT specify `CORSAllowOrigin` or `CORSAllowMethods` or `CORSAllowHeaders`, `rye` will fall back to DEFAULT values if it receives a request with the `Origin` header.
+
+*Default* CORS Values:
+
+**DEFAULT_CORS_ALLOW_METHODS**: "POST, GET, OPTIONS, PUT, DELETE"
+**DEFAULT_CORS_ALLOW_HEADERS**: "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Access-Token"
+
+If `CORSAllowOrigin` is NOT set in the config (and `Origin` header is passed), rye will set the `Access-Control-Allow-Origin` response header to whatever `Origin` was set to in the request.
+
+In other words - you should probably properly instantiate `Config` with all CORS attributes in production.
 
 ### MWHandler
 This struct is the primary handler container. It holds references to the statsd client.
