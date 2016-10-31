@@ -44,9 +44,6 @@ Create a statsd client (if desired) and create a rye Config in order to pass in 
 config := &rye.Config{
         Statter:          statsdClient,
         StatRate:         DEFAULT_STATSD_RATE,
-        CORSAllowOrigin:  "*.invisionapp.com",                    // OPTIONAL
-        CORSAllowMethods: "PUT, GET, DELETE",                     // OPTIONAL
-        CORSAllowHeaders: "Accept, Content-Type, Content-Length", // OPTIONAL
 }
 ```
 
@@ -151,7 +148,7 @@ func main() {
     srv.ListenAndServe()
 }
 
-func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.DetailedError {
+func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.middlewares.Response {
     log.Infof("Home handler has fired!")
 
     fmt.Fprint(rw, "This is the home handler")

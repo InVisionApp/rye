@@ -1,4 +1,4 @@
-package middlewares
+package middleware
 
 // Response struct is utilized by middlewares as a way to share state;
 // ie. a middleware can return a *middleware.Response as a way to indicate

@@ -11,7 +11,7 @@ import (
 
 	"github.com/cactus/go-statsd-client/statsd"
 
-	"github.com/InVisionApp/rye/middlewares"
+	"github.com/InVisionApp/rye/middleware"
 )
 
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
@@ -33,7 +33,7 @@ type JSONStatus struct {
 }
 
 //Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
-type Handler func(w http.ResponseWriter, r *http.Request) *middlewares.Response
+type Handler func(w http.ResponseWriter, r *http.Request) *middleware.Response
 
 // Constructor for new instantiating new rye instances
 func NewMWHandler(config Config) *MWHandler {
@@ -45,7 +45,7 @@ func NewMWHandler(config Config) *MWHandler {
 func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, handler := range handlers {
-			var resp *middlewares.Response
+			var resp *middleware.Response
 
 			// Record handler runtime
 			func() {

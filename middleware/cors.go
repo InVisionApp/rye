@@ -3,11 +3,11 @@
 // Example use case:
 //
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.middlewares.NewCORS(),
+//     rye.middleware.CORS,
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
 
-package middlewares
+package middleware
 
 import (
 	"net/http"
@@ -19,14 +19,14 @@ const (
 	DEFAULT_CORS_ALLOW_HEADERS = "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Access-Token"
 )
 
-type CORS struct {
+type cors struct {
 	CORSAllowOrigin  string
 	CORSAllowMethods string
 	CORSAllowHeaders string
 }
 
-func NewCORSMiddleware() func(rw http.ResponseWriter, req *http.Request) *Response {
-	c := &CORS{
+func CORS() func(rw http.ResponseWriter, req *http.Request) *Response {
+	c := &cors{
 		CORSAllowOrigin:  DEFAULT_CORS_ALLOW_ORIGIN,
 		CORSAllowMethods: DEFAULT_CORS_ALLOW_METHODS,
 		CORSAllowHeaders: DEFAULT_CORS_ALLOW_HEADERS,
@@ -35,8 +35,8 @@ func NewCORSMiddleware() func(rw http.ResponseWriter, req *http.Request) *Respon
 	return c.handle
 }
 
-func NewCORSMiddlewareParams(origin, methods, headers string) func(rw http.ResponseWriter, req *http.Request) *Response {
-	c := &CORS{
+func NewCORS(origin, methods, headers string) func(rw http.ResponseWriter, req *http.Request) *Response {
+	c := &cors{
 		CORSAllowOrigin:  origin,
 		CORSAllowMethods: methods,
 		CORSAllowHeaders: headers,
@@ -47,7 +47,7 @@ func NewCORSMiddlewareParams(origin, methods, headers string) func(rw http.Respo
 
 // If `Origin` header gets passed, add required response headers for CORS support.
 // Return bool if `Origin` header was detected.
-func (c *CORS) handle(rw http.ResponseWriter, req *http.Request) *Response {
+func (c *cors) handle(rw http.ResponseWriter, req *http.Request) *Response {
 	origin := req.Header.Get("Origin")
 
 	// Origin header not provided, nothing for CORS to do

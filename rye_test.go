@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/InVisionApp/rye/middlewares"
+	"github.com/InVisionApp/rye/middleware"
 )
 
 const (
@@ -201,20 +201,20 @@ var _ = Describe("Rye", func() {
 
 })
 
-func successHandler(rw http.ResponseWriter, r *http.Request) *middlewares.Response {
+func successHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
 	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
 	return nil
 }
 
-func failureHandler(rw http.ResponseWriter, r *http.Request) *middlewares.Response {
-	return &middlewares.Response{
+func failureHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response{
 		StatusCode: 505,
 		Err:        fmt.Errorf("Foo"),
 	}
 }
 
-func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *middlewares.Response {
-	return &middlewares.Response{
+func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response{
 		StopExecution: true,
 	}
 }
