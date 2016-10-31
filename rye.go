@@ -2,6 +2,7 @@ package rye
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	"github.com/cactus/go-statsd-client/statsd"
+
+	"github.com/InVisionApp/rye/middleware"
 )
 
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
@@ -25,43 +28,45 @@ type Config struct {
 	StatRate float32
 }
 
+type JSONStatus struct {
+	Message string `json:"message"`
+	Status  string `json:"status"`
+}
+
+//Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
+type Handler func(w http.ResponseWriter, r *http.Request) *middleware.Response
+
+// Constructor for new instantiating new rye instances
 func NewMWHandler(config Config) *MWHandler {
 	return &MWHandler{
 		Config: config,
 	}
 }
 
-type JSONStatus struct {
-	Message string `json:"message"`
-	Status  string `json:"status"`
-}
-
-type DetailedError struct {
-	Err        error
-	StatusCode int
-}
-
-// meet the Error interface
-func (d *DetailedError) Error() string {
-	return d.Err.Error()
-}
-
-//Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
-type Handler func(w http.ResponseWriter, r *http.Request) *DetailedError
-
 func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, handler := range handlers {
-			var err *DetailedError
+			var resp *middleware.Response
 
 			// Record handler runtime
 			func() {
 				statusCode := "2xx"
 				startTime := time.Now()
 
-				if err = handler(w, r); err != nil {
-					statusCode = strconv.Itoa(err.StatusCode)
-					WriteJSONStatus(w, "error", err.Error(), err.StatusCode)
+				if resp = handler(w, r); resp != nil {
+					if resp.StopExecution {
+						return
+					}
+
+					// Middleware did something funky - returned a *Response
+					// but did not set an error;
+					if resp.Err == nil {
+						resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
+						resp.StatusCode = http.StatusInternalServerError
+					}
+
+					statusCode = strconv.Itoa(resp.StatusCode)
+					WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
 				}
 
 				handlerName := getFuncName(handler)
@@ -81,17 +86,17 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						m.Config.StatRate,
 					)
 				}
-
 			}()
 
 			// stop executing rest of the handlers if we encounter an error
-			if err != nil {
+			if resp != nil {
 				return
 			}
 		}
 	})
 }
 
+// Wrapper for WriteJSONResponse that returns a marshalled JSONStatus blob
 func WriteJSONStatus(rw http.ResponseWriter, status, message string, statusCode int) {
 	jsonData, _ := json.Marshal(&JSONStatus{
 		Message: message,
@@ -101,12 +106,14 @@ func WriteJSONStatus(rw http.ResponseWriter, status, message string, statusCode 
 	WriteJSONResponse(rw, statusCode, jsonData)
 }
 
+// Write data and status code to rw
 func WriteJSONResponse(rw http.ResponseWriter, statusCode int, content []byte) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(statusCode)
 	rw.Write(content)
 }
 
+// Programmatically determine given function name (and perform string cleanup)
 func getFuncName(i interface{}) string {
 	fullName := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 	ns := strings.Split(fullName, ".")

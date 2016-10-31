@@ -4,33 +4,39 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/InVisionApp/rye/fakes/statsdfakes"
-	"os"
 	"fmt"
+	"github.com/InVisionApp/rye/fakes/statsdfakes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"time"
+
+	"github.com/InVisionApp/rye/middleware"
+)
+
+const (
+	RYE_TEST_HANDLER_ENV_VAR = "RYE_TEST_HANDLER_PASS"
 )
 
 type statsInc struct {
-	Name string
-	Time int64
+	Name     string
+	Time     int64
 	StatRate float32
 }
 
 type statsTiming struct {
-	Name string
-	Time time.Duration
+	Name     string
+	Time     time.Duration
 	StatRate float32
 }
 
 var _ = Describe("Rye", func() {
 
 	var (
-		request  *http.Request
-		response *httptest.ResponseRecorder
-		mwHandler	*MWHandler
-		fakeStatter	*statsdfakes.FakeStatter
+		request     *http.Request
+		response    *httptest.ResponseRecorder
+		mwHandler   *MWHandler
+		fakeStatter *statsdfakes.FakeStatter
 	)
 
 	const (
@@ -39,22 +45,31 @@ var _ = Describe("Rye", func() {
 
 	BeforeEach(func() {
 		fakeStatter = &statsdfakes.FakeStatter{}
-		ryeConfig := Config{fakeStatter,STATRATE}
+		ryeConfig := Config{
+			Statter:  fakeStatter,
+			StatRate: STATRATE,
+		}
 		mwHandler = NewMWHandler(ryeConfig)
 
 		response = httptest.NewRecorder()
+		request = &http.Request{
+			Header: make(map[string][]string, 0),
+		}
 
-		os.Unsetenv("RYE_TEST_HANDLER_PASS")
+		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
 	})
 
 	AfterEach(func() {
-		os.Unsetenv("RYE_TEST_HANDLER_PASS")
+		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
 	})
 
 	Describe("NewMWHandler", func() {
 		Context("when instantiating a mwhandler", func() {
 			It("should have correct attributes", func() {
-				ryeConfig := Config{fakeStatter,STATRATE}
+				ryeConfig := Config{
+					Statter:  fakeStatter,
+					StatRate: STATRATE,
+				}
 				handler := NewMWHandler(ryeConfig)
 				Expect(handler).NotTo(BeNil())
 				Expect(handler.Config.Statter).To(Equal(fakeStatter))
@@ -75,7 +90,7 @@ var _ = Describe("Rye", func() {
 			It("should return valid HandlerFunc", func() {
 
 				var (
-					actualInc statsInc
+					actualInc    statsInc
 					actualTiming statsTiming
 				)
 
@@ -102,7 +117,7 @@ var _ = Describe("Rye", func() {
 
 				Expect(h).ToNot(BeNil())
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
-				Expect(os.Getenv("RYE_TEST_HANDLER_PASS")).To(Equal("1"))
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
 				Expect(actualInc.Name).To(Equal("handlers.successHandler.2xx"))
 				Expect(actualInc.Time).To(Equal(int64(1)))
 				Expect(actualInc.StatRate).To(Equal(float32(STATRATE)))
@@ -111,11 +126,32 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when a handler returns a response with StopExecution", func() {
+			It("should not execute any further handlers", func() {
+				request.Method = "OPTIONS"
+
+				h := mwHandler.Handle([]Handler{stopExecutionHandler, successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
+			})
+		})
+
+		Context("when a handler returns a response with neither error or StopExecution set", func() {
+			It("should return a 500 + error message (and stop execution)", func() {
+				h := mwHandler.Handle([]Handler{badResponseHandler, successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(response.Code).To(Equal(http.StatusInternalServerError))
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
+			})
+		})
+
 		Context("when adding an erroneous handler", func() {
 			It("should interrupt handler chain and set a response status code", func() {
 
 				var (
-					actualInc statsInc
+					actualInc    statsInc
 					actualTiming statsTiming
 				)
 
@@ -175,16 +211,25 @@ var _ = Describe("Rye", func() {
 
 })
 
-func successHandler(rw http.ResponseWriter, r *http.Request) *DetailedError {
-	os.Setenv("RYE_TEST_HANDLER_PASS", "1")
+func successHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
 	return nil
 }
 
-func failureHandler(rw http.ResponseWriter, r *http.Request) *DetailedError {
-	return &DetailedError{
+func badResponseHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response{}
+}
+
+func failureHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response{
 		StatusCode: 505,
-		Err:      fmt.Errorf("Foo"),
+		Err:        fmt.Errorf("Foo"),
 	}
 }
 
+func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response{
+		StopExecution: true,
+	}
+}
 func testFunc() {}
