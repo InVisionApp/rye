@@ -137,6 +137,16 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when a handler returns a response with neither error or StopExecution set", func() {
+			It("should return a 500 + error message (and stop execution)", func() {
+				h := mwHandler.Handle([]Handler{badResponseHandler, successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(response.Code).To(Equal(http.StatusInternalServerError))
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
+			})
+		})
+
 		Context("when adding an erroneous handler", func() {
 			It("should interrupt handler chain and set a response status code", func() {
 
@@ -204,6 +214,10 @@ var _ = Describe("Rye", func() {
 func successHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
 	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
 	return nil
+}
+
+func badResponseHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response{}
 }
 
 func failureHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {

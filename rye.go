@@ -2,6 +2,7 @@ package rye
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -55,6 +56,13 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 				if resp = handler(w, r); resp != nil {
 					if resp.StopExecution {
 						return
+					}
+
+					// Middleware did something funky - returned a *Response
+					// but did not set an error;
+					if resp.Err == nil {
+						resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
+						resp.StatusCode = http.StatusInternalServerError
 					}
 
 					statusCode = strconv.Itoa(resp.StatusCode)
