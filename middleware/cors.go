@@ -3,9 +3,17 @@
 // Example use case:
 //
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.middleware.CORS,
+//     rye.middleware.CORS(), // use defaults for allowed origin, headers, methods
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
+//
+// OR
+//
+//  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
+//     rye.middleware.NewCORS("*", "POST, GET", "SomeHeader, AnotherHeader"),
+//     yourHandler,
+// })).Methods("PUT", "OPTIONS")
+//
 
 package middleware
 
