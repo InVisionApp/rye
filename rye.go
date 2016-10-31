@@ -10,11 +10,8 @@ import (
 	"time"
 
 	"github.com/cactus/go-statsd-client/statsd"
-)
 
-const (
-	DEFAULT_CORS_ALLOW_METHODS = "POST, GET, OPTIONS, PUT, DELETE"
-	DEFAULT_CORS_ALLOW_HEADERS = "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Access-Token"
+	"github.com/InVisionApp/rye/middlewares"
 )
 
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
@@ -26,11 +23,8 @@ type MWHandler struct {
 }
 
 type Config struct {
-	Statter          statsd.Statter
-	StatRate         float32
-	CORSAllowOrigin  string
-	CORSAllowMethods string
-	CORSAllowHeaders string
+	Statter  statsd.Statter
+	StatRate float32
 }
 
 type JSONStatus struct {
@@ -38,13 +32,8 @@ type JSONStatus struct {
 	Status  string `json:"status"`
 }
 
-type DetailedError struct {
-	Err        error
-	StatusCode int
-}
-
 //Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
-type Handler func(w http.ResponseWriter, r *http.Request) *DetailedError
+type Handler func(w http.ResponseWriter, r *http.Request) *middlewares.Response
 
 // Constructor for new instantiating new rye instances
 func NewMWHandler(config Config) *MWHandler {
@@ -53,31 +42,23 @@ func NewMWHandler(config Config) *MWHandler {
 	}
 }
 
-// Meet the Error interface
-func (d *DetailedError) Error() string {
-	return d.Err.Error()
-}
-
 func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		m.handleCORS(w, r)
-
-		// No need to go any further if preflight OPTIONS request
-		if r.Method == "OPTIONS" {
-			return
-		}
-
 		for _, handler := range handlers {
-			var err *DetailedError
+			var resp *middlewares.Response
 
 			// Record handler runtime
 			func() {
 				statusCode := "2xx"
 				startTime := time.Now()
 
-				if err = handler(w, r); err != nil {
-					statusCode = strconv.Itoa(err.StatusCode)
-					WriteJSONStatus(w, "error", err.Error(), err.StatusCode)
+				if resp = handler(w, r); resp != nil {
+					if resp.StopExecution {
+						return
+					}
+
+					statusCode = strconv.Itoa(resp.StatusCode)
+					WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
 				}
 
 				handlerName := getFuncName(handler)
@@ -100,46 +81,11 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 			}()
 
 			// stop executing rest of the handlers if we encounter an error
-			if err != nil {
+			if resp != nil {
 				return
 			}
 		}
 	})
-}
-
-// If `Origin` header gets passed, add required response headers for CORS support.
-// Return bool if `Origin` header was detected.
-func (m *MWHandler) handleCORS(rw http.ResponseWriter, req *http.Request) bool {
-	origin := req.Header.Get("Origin")
-
-	if origin == "" {
-		return false
-	}
-
-	// if Config.CORSAllowOrigin is set - use that, otherwise fall back to provided origin
-	if m.Config.CORSAllowOrigin != "" {
-		origin = m.Config.CORSAllowOrigin
-	}
-
-	// if Config.CORSAllowMethods is set - use that, otherwise fall back to default allowed methods
-	allowMethods := DEFAULT_CORS_ALLOW_METHODS
-
-	if m.Config.CORSAllowMethods != "" {
-		allowMethods = m.Config.CORSAllowMethods
-	}
-
-	// if Config.AllowHeaders is set - use that, otherwise fall back to default allowed headers
-	allowHeaders := DEFAULT_CORS_ALLOW_HEADERS
-
-	if m.Config.CORSAllowHeaders != "" {
-		allowHeaders = m.Config.CORSAllowHeaders
-	}
-
-	rw.Header().Set("Access-Control-Allow-Origin", origin)
-	rw.Header().Set("Access-Control-Allow-Methods", allowMethods)
-	rw.Header().Set("Access-Control-Allow-Headers", allowHeaders)
-
-	return true
 }
 
 // Wrapper for WriteJSONResponse that returns a marshalled JSONStatus blob
