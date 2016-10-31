@@ -25,7 +25,7 @@ govendor add github.com/InVisionApp/rye
 * We also wanted to have an easy way to say “run these 2 middlewares on this endpoint, but only one middleware on this endpoint” 
     * Of course, this is doable with negroni and gorilla-mux, but you’d have to use a subrouter with gorilla, which tends to end up in more code
 * Also, as a bonus, we bundled in some helper methods for standardizing JSON response messages
-* And finally, we created a unified way for handlers and middlewares to return more detailed errors via the `rye.middleware.Rye` struct (if they chose to do so)
+* And finally, we created a unified way for handlers and middlewares to return more detailed errors via the `rye.middleware.Response` struct (if they chose to do so)
 * Oh yeah and it has built-in support for CORS too!
 
 ## Example
