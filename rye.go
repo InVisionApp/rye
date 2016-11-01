@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/cactus/go-statsd-client/statsd"
-
-	"github.com/InVisionApp/rye/middleware"
 )
 
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
@@ -33,8 +31,23 @@ type JSONStatus struct {
 	Status  string `json:"status"`
 }
 
+// Response struct is utilized by middlewares as a way to share state;
+// ie. a middleware can return a *Response as a way to indicate
+// that further middleware execution should stop (without an error) or return a
+// a hard error by setting `Err` + `StatusCode`.
+type Response struct {
+	Err           error
+	StatusCode    int
+	StopExecution bool
+}
+
+// Meet the Error interface
+func (r *Response) Error() string {
+	return r.Err.Error()
+}
+
 //Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
-type Handler func(w http.ResponseWriter, r *http.Request) *middleware.Response
+type Handler func(w http.ResponseWriter, r *http.Request) *Response
 
 // Constructor for new instantiating new rye instances
 func NewMWHandler(config Config) *MWHandler {
@@ -46,7 +59,7 @@ func NewMWHandler(config Config) *MWHandler {
 func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, handler := range handlers {
-			var resp *middleware.Response
+			var resp *Response
 
 			// Record handler runtime
 			func() {

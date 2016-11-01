@@ -4,14 +4,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"errors"
 	"fmt"
 	"github.com/InVisionApp/rye/fakes/statsdfakes"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"time"
-
-	"github.com/InVisionApp/rye/middleware"
 )
 
 const (
@@ -209,27 +208,39 @@ var _ = Describe("Rye", func() {
 		})
 	})
 
+	Describe("Error()", func() {
+		Context("when an error is set on Response struct", func() {
+			It("should return a string if you call Error()", func() {
+				resp := &Response{
+					Err: errors.New("some error"),
+				}
+
+				Expect(resp.Error()).To(Equal("some error"))
+			})
+		})
+	})
 })
 
-func successHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+func successHandler(rw http.ResponseWriter, r *http.Request) *Response {
 	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
 	return nil
 }
 
-func badResponseHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
-	return &middleware.Response{}
+func badResponseHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	return &Response{}
 }
 
-func failureHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
-	return &middleware.Response{
+func failureHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	return &Response{
 		StatusCode: 505,
 		Err:        fmt.Errorf("Foo"),
 	}
 }
 
-func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
-	return &middleware.Response{
+func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	return &Response{
 		StopExecution: true,
 	}
 }
+
 func testFunc() {}
