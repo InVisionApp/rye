@@ -28,13 +28,17 @@ govendor add github.com/InVisionApp/rye
 * And finally, we created a unified way for handlers and middlewares to return more detailed errors via the `rye.middleware.Response` struct (if they chose to do so)
 * Oh yeah and it has built-in support for CORS too!
 
-## Example
+## Writing custom middleware handlers
+
+You can find a complete working example [here](example/rye_example.go).
+
 Begin by importing the required libraries:
 
 ```go
 import (
     "github.com/cactus/go-statsd-client/statsd"
     "github.com/InVisionApp/rye"
+    "github.com/InVisionApp/rye/middleware"
 )
 ```
 
@@ -48,38 +52,39 @@ config := &rye.Config{
 ```
 
 Create a middleware handler. The purpose of the Handler is to keep Config and to provide an interface for chaining http handlers.
+
 ```go
 middlewareHandler := rye.NewMWHandler(config)
 ```
 
-Build your http handlers using the Handler type from **rye**.
+Build your http handlers using the Handler type from the **middleware** library in **rye**.
 
 ```go
-type Handler func(w http.ResponseWriter, r *http.Request) *rye.middleware.Response
+type Handler func(w http.ResponseWriter, r *http.Request) *middleware.Response
 ```
 
-Here are some example handlers:
+Here are some example, *custom* handlers:
 
 ```go
-func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.middleware.Response {
+func homeHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
 	fmt.Fprint(rw, "Refer to README.md for auth-api API usage")
 	return nil
 }
 
-func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.middleware.Response {
+func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
 	fmt.Fprint(rw, "This handler fires first.")
 	return nil
 }
 
-func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.middleware.Response {
-	return &rye.middleware.Response {
+func errorHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+	return &middleware.Response {
     			StatusCode: http.StatusInternalServerError,
     			Err:        errors.New(message),
     }
 }
 ```
 
-Finally, to setup your handlers in your api (Example shown using [Gorilla](https://github.com/gorilla/mux)):
+Finally, to setup your handlers in your API (Example shown using [Gorilla](https://github.com/gorilla/mux)):
 ```go
 routes := mux.NewRouter().StrictSlash(true)
 
@@ -100,77 +105,34 @@ srv := &http.Server{
 srv.ListenAndServe()
 
 ```
-## Full Example
+
+## Using built-in middleware handlers
+
+Rye comes with various pre-built middleware handlers. Pre-built middlewares are listed under the [middleware](middleware/) dir in the project.
+
+To use them, specify the constructor of the middleware as one of the middleware handlers when you define your routes:
+
 ```go
-package main
+// example
+routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
+    middleware.CORS(), // to use the CORS middleware (with defaults)
+    a.homeHandler,
+})).Methods("GET")
 
-import (
-    "errors"
-    "fmt"
-    "net/http"
+OR 
 
-    "github.com/InVisionApp/rye"
-    log "github.com/Sirupsen/logrus"
-    "github.com/cactus/go-statsd-client/statsd"
-    "github.com/gorilla/mux"
-)
+routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
+    middleware.NewCORS("*", "GET, POST", "X-Access-Token"), // to use specific config when instantiating the middleware handler
+    a.homeHandler,
+})).Methods("GET")
 
-func main() {
-    statsdClient, err := statsd.NewBufferedClient("localhost:12345", "my_service", 1.0, 0)
-    if err != nil {
-        log.Fatalf("Unable to instantiate statsd client: %v", err.Error())
-    }
-
-    config := rye.Config{statsdClient, 1.0}
-
-    middlewareHandler := rye.NewMWHandler(config)
-
-    routes := mux.NewRouter().StrictSlash(true)
-
-    routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
-        middlewareFirstHandler,
-        homeHandler,
-    })).Methods("GET")
-
-    routes.Handle("/error", middlewareHandler.Handle([]rye.Handler{
-        middlewareFirstHandler,
-        errorHandler,
-        homeHandler,
-    })).Methods("GET")
-
-    log.Infof("API server listening on %v", "localhost:8181")
-
-    srv := &http.Server{
-        Addr:    "localhost:8181",
-        Handler: routes,
-    }
-
-    srv.ListenAndServe()
-}
-
-func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.middleware.Response {
-    log.Infof("Home handler has fired!")
-
-    fmt.Fprint(rw, "This is the home handler")
-    return nil
-}
-
-func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.middleware.Response {
-    log.Infof("Middleware handler has fired!")
-    return nil
-}
-
-func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.middleware.Response {
-    log.Infof("Error handler has fired!")
-
-    message := "This is the error handler"
-
-    return &rye.middleware.Response{
-        StatusCode: http.StatusInternalServerError,
-        Err:        errors.New(message),
-    }
-}
 ```
+
+### Middleware list
+
+| Name | Description |
+----------------------
+| [CORS](middleware/cors.go) | Provide CORS functionality for routes |
 
 ## API
 
