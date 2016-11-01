@@ -1,4 +1,6 @@
 
+[ ![Codeship Status for InVisionApp/rye](https://app.codeship.com/projects/5c4ac520-7fb8-0134-a813-165195a768fc/status?branch=master)](https://app.codeship.com/projects/181988)
+
 <img align="right" src="rye.gif">
 
 # rye

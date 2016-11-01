@@ -1,0 +1,4 @@
+build:
+  build:
+    dockerfile_path: Dockerfile
+  cached: true
