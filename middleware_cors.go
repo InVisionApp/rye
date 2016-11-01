@@ -1,21 +1,34 @@
 // This middleware provides CORS functionality
 //
+// You can use this middleware by specifying `rye.CORS()` or `rye.NewCors(origin, methods, headers)`
+// when defining your routes.
+//
+// *Default* CORS Values:
+//
+// **DEFAULT_CORS_ALLOW_ORIGIN**: "*"
+// **DEFAULT_CORS_ALLOW_METHODS**: "POST, GET, OPTIONS, PUT, DELETE"
+// **DEFAULT_CORS_ALLOW_HEADERS**: "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Access-Token"
+//
+// If you are planning to use this in production - you should probably use this middleware *with* params.
+//
+//
 // Example use case:
 //
+// ```
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.middleware.CORS(), // use defaults for allowed origin, headers, methods
+//     rye.CORS(), // use defaults for allowed origin, headers, methods
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
 //
-// OR
+// // OR
 //
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.middleware.NewCORS("*", "POST, GET", "SomeHeader, AnotherHeader"),
+//     rye.NewCORS("*", "POST, GET", "SomeHeader, AnotherHeader"),
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
-//
+// ```
 
-package middleware
+package rye
 
 import (
 	"net/http"
@@ -33,7 +46,7 @@ type cors struct {
 	CORSAllowHeaders string
 }
 
-func CORS() func(rw http.ResponseWriter, req *http.Request) *Response {
+func MiddlewareCORS() func(rw http.ResponseWriter, req *http.Request) *Response {
 	c := &cors{
 		CORSAllowOrigin:  DEFAULT_CORS_ALLOW_ORIGIN,
 		CORSAllowMethods: DEFAULT_CORS_ALLOW_METHODS,
@@ -43,7 +56,7 @@ func CORS() func(rw http.ResponseWriter, req *http.Request) *Response {
 	return c.handle
 }
 
-func NewCORS(origin, methods, headers string) func(rw http.ResponseWriter, req *http.Request) *Response {
+func NewMiddlewareCORS(origin, methods, headers string) func(rw http.ResponseWriter, req *http.Request) *Response {
 	c := &cors{
 		CORSAllowOrigin:  origin,
 		CORSAllowMethods: methods,

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/InVisionApp/rye"
-	"github.com/InVisionApp/rye/middleware"
 	log "github.com/Sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/gorilla/mux"
@@ -35,7 +34,7 @@ func main() {
 	// If you perform a `curl -i http://localhost:8181/cors -H "Origin: *.foo.com"`
 	// you will see that the CORS middleware is adding required headers
 	routes.Handle("/cors", middlewareHandler.Handle([]rye.Handler{
-		middleware.CORS(),
+		rye.MiddlewareCORS(),
 		homeHandler,
 	})).Methods("GET", "OPTIONS")
 
@@ -55,24 +54,24 @@ func main() {
 	srv.ListenAndServe()
 }
 
-func homeHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	log.Infof("Home handler has fired!")
 
 	fmt.Fprint(rw, "This is the home handler")
 	return nil
 }
 
-func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	log.Infof("Middleware handler has fired!")
 	return nil
 }
 
-func errorHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	log.Infof("Error handler has fired!")
 
 	message := "This is the error handler"
 
-	return &middleware.Response{
+	return &rye.Response{
 		StatusCode: http.StatusInternalServerError,
 		Err:        errors.New(message),
 	}

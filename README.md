@@ -4,7 +4,7 @@
 <img align="right" src="rye.gif">
 
 # rye
-A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd metrics for use with DataDog or other logging aggregators and out-of-the-box CORS support.
+A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd metrics for use with DataDog or other logging aggregators. In addition, **rye** comes with various pre-built middleware handlers for enabling functionality such as CORS and rate/CIDR limiting.
 
 ## Setup
 In order to use **rye**, you should vendor it and the **statsd** client within your project.
@@ -22,13 +22,13 @@ govendor add github.com/InVisionApp/rye
 
 ## Why another middleware lib?
 
-* For one, `rye` is *tiny* - the entire library is <120 lines of code including comments
-* In addition, each middleware gets statsd metrics tracking for free
-* We also wanted to have an easy way to say “run these 2 middlewares on this endpoint, but only one middleware on this endpoint” 
+* `rye` is *tiny* - the core lib is ~140 lines of code (including comments)!
+* Each middleware gets statsd metrics tracking for free
+* We wanted to have an easy way to say “run these two middlewares on this endpoint, but only one middleware on this endpoint” 
     * Of course, this is doable with negroni and gorilla-mux, but you’d have to use a subrouter with gorilla, which tends to end up in more code
-* Also, as a bonus, we bundled in some helper methods for standardizing JSON response messages
-* And finally, we created a unified way for handlers and middlewares to return more detailed errors via the `rye.middleware.Response` struct (if they chose to do so)
-* Oh yeah and it has built-in support for CORS too!
+* Bundled helper methods for standardising JSON response messages
+* Unified way for handlers and middlewares to return more detailed responses via the `rye.Response` struct (if they chose to do so); this functionality allows you to easily "share" state between your custom middleware handlers!
+* Pre-built middlewares for things like CORS support
 
 ## Writing custom middleware handlers
 
@@ -40,7 +40,6 @@ Begin by importing the required libraries:
 import (
     "github.com/cactus/go-statsd-client/statsd"
     "github.com/InVisionApp/rye"
-    "github.com/InVisionApp/rye/middleware"
 )
 ```
 
@@ -59,27 +58,27 @@ Create a middleware handler. The purpose of the Handler is to keep Config and to
 middlewareHandler := rye.NewMWHandler(config)
 ```
 
-Build your http handlers using the Handler type from the **middleware** library in **rye**.
+Build your http handlers using the Handler type from the **rye** package.
 
 ```go
-type Handler func(w http.ResponseWriter, r *http.Request) *middleware.Response
+type Handler func(w http.ResponseWriter, r *http.Request) *rye.Response
 ```
 
-Here are some example, *custom* handlers:
+Here are some example (custom) handlers:
 
 ```go
-func homeHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	fmt.Fprint(rw, "Refer to README.md for auth-api API usage")
 	return nil
 }
 
-func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
+func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	fmt.Fprint(rw, "This handler fires first.")
 	return nil
 }
 
-func errorHandler(rw http.ResponseWriter, r *http.Request) *middleware.Response {
-	return &middleware.Response {
+func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
+	return &rye.Response {
     			StatusCode: http.StatusInternalServerError,
     			Err:        errors.New(message),
     }
@@ -100,31 +99,28 @@ log.Infof("API server listening on %v", ListenAddress)
 srv := &http.Server{
     Addr:         ListenAddress,
     Handler:      routes,
-    ReadTimeout:  time.Duration(ReadTimeout) * time.Second,
-    WriteTimeout: time.Duration(WriteTimeout) * time.Second,
 }
 
 srv.ListenAndServe()
-
 ```
 
 ## Using built-in middleware handlers
 
-Rye comes with various pre-built middleware handlers. Pre-built middlewares are listed under the [middleware](middleware/) dir in the project.
+Rye comes with various pre-built middleware handlers. Pre-built middlewares  source (and docs) can be found in the package dir following the pattern `middleware_*.go`.
 
 To use them, specify the constructor of the middleware as one of the middleware handlers when you define your routes:
 
 ```go
 // example
 routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
-    middleware.CORS(), // to use the CORS middleware (with defaults)
+    rye.CORS(), // to use the CORS middleware (with defaults)
     a.homeHandler,
 })).Methods("GET")
 
 OR 
 
 routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
-    middleware.NewCORS("*", "GET, POST", "X-Access-Token"), // to use specific config when instantiating the middleware handler
+    rye.NewCORS("*", "GET, POST", "X-Access-Token"), // to use specific config when instantiating the middleware handler
     a.homeHandler,
 })).Methods("GET")
 
@@ -134,33 +130,18 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 
 | Name | Description |
 ----------------------
-| [CORS](middleware/cors.go) | Provide CORS functionality for routes |
+| [CORS](middleware_cors.go) | Provide CORS functionality for routes |
 
 ## API
 
 ### Config
-This struct is configuration for the MWHandler. It holds references and config to dependencies such as the statsdClient and CORS related settings.
+This struct is configuration for the MWHandler. It holds references and config to dependencies such as the statsdClient.
 ```go
 type Config struct {
     Statter          statsd.Statter
     StatRate         float32
-    CORSAllowOrigin  string
-    CORSAllowMethods string
-    CORSAllowHeaders string
 }
 ```
-
-### CORS
-`rye` supports CORS! When instantiating `Config`, if you do NOT specify `CORSAllowOrigin` or `CORSAllowMethods` or `CORSAllowHeaders`, `rye` will fall back to DEFAULT values if it receives a request with the `Origin` header.
-
-*Default* CORS Values:
-
-**DEFAULT_CORS_ALLOW_METHODS**: "POST, GET, OPTIONS, PUT, DELETE"
-**DEFAULT_CORS_ALLOW_HEADERS**: "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Access-Token"
-
-If `CORSAllowOrigin` is NOT set in the config (and `Origin` header is passed), rye will set the `Access-Control-Allow-Origin` response header to whatever `Origin` was set to in the request.
-
-In other words - you should probably properly instantiate `Config` with all CORS attributes in production.
 
 ### MWHandler
 This struct is the primary handler container. It holds references to the statsd client.
@@ -169,18 +150,20 @@ type MWHandler struct {
     Config Config
 }
 ```
+
 #### Constructor
 ```go
 func NewMWHandler(statter statsd.Statter, statrate float32) *MWHandler
 ```
+
 #### Handle
 This method chains middleware handlers in order and returns a complete `http.Handler`.
 ```go
 func (m *MWHandler) Handle(handlers []Handler) http.Handler
 ```
 
-### rye.middleware.Response
-This struct is utilized by middlewares as a way to share state; ie. a middleware can return a *middleware.Response as a way to indicate that further middleware execution should stop (without an error) or return a hard error by setting `Err` + `StatusCode`.
+### rye.Response
+This struct is utilized by middlewares as a way to share state; ie. a middleware can return a `*rye.Response` as a way to indicate that further middleware execution should stop (without an error) or return a hard error by setting `Err` + `StatusCode`.
 ```go
 type Response struct {
     Err           error
@@ -190,9 +173,9 @@ type Response struct {
 ```
 
 ### Handler
-This type is used to define an http handler that can be chained using the MWHandler.Handle method. The `middleware.Response` is from the **rye** middleware package and has facilities to emit StatusCode, bubble up errors and/or stop further middleware execution chain.
+This type is used to define an http handler that can be chained using the MWHandler.Handle method. The `rye.Response` is from the **rye** package and has facilities to emit StatusCode, bubble up errors and/or stop further middleware execution chain.
 ```go
-type Handler func(w http.ResponseWriter, r *http.Request) *middleware.Response
+type Handler func(w http.ResponseWriter, r *http.Request) *rye.Response
 ```
 
 ## Test stuff
@@ -202,3 +185,4 @@ All interfacing with the project is done via `make`. Targets exist for all prima
 - Generate: `make generate` - this generates based on vendored libraries (from $GOPATH)
 - All (test, build): `make all`
 - .. and a few others. Run `make help` to see all available targets.
+- You can also test the project in Docker (and Codeship) by running `jet steps`
