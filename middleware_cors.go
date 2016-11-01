@@ -46,7 +46,7 @@ type cors struct {
 	CORSAllowHeaders string
 }
 
-func CORS() func(rw http.ResponseWriter, req *http.Request) *Response {
+func MiddlewareCORS() func(rw http.ResponseWriter, req *http.Request) *Response {
 	c := &cors{
 		CORSAllowOrigin:  DEFAULT_CORS_ALLOW_ORIGIN,
 		CORSAllowMethods: DEFAULT_CORS_ALLOW_METHODS,
@@ -56,7 +56,7 @@ func CORS() func(rw http.ResponseWriter, req *http.Request) *Response {
 	return c.handle
 }
 
-func NewCORS(origin, methods, headers string) func(rw http.ResponseWriter, req *http.Request) *Response {
+func NewMiddlewareCORS(origin, methods, headers string) func(rw http.ResponseWriter, req *http.Request) *Response {
 	c := &cors{
 		CORSAllowOrigin:  origin,
 		CORSAllowMethods: methods,

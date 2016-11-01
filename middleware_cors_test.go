@@ -25,7 +25,7 @@ var _ = Describe("CORS Middleware", func() {
 	Describe("handle", func() {
 		Context("when origin header is not set", func() {
 			It("should return nil", func() {
-				resp := CORS()(response, request)
+				resp := MiddlewareCORS()(response, request)
 				Expect(resp).To(BeNil())
 			})
 		})
@@ -40,7 +40,7 @@ var _ = Describe("CORS Middleware", func() {
 
 				It("should set all CORS headers from params", func() {
 					request.Header.Add("Origin", "*.invisionapp.com")
-					resp := NewCORS(testOrigin, testMethods, testHeaders)(response, request)
+					resp := NewMiddlewareCORS(testOrigin, testMethods, testHeaders)(response, request)
 
 					Expect(resp).To(BeNil())
 					Expect(response.Header().Get("Access-Control-Allow-Origin")).To(Equal(testOrigin))
@@ -52,7 +52,7 @@ var _ = Describe("CORS Middleware", func() {
 			Context("and CORS was instantiated with defaults", func() {
 				It("should set all CORS headers using defaults", func() {
 					request.Header.Add("Origin", "*.invisionapp.com")
-					resp := CORS()(response, request)
+					resp := MiddlewareCORS()(response, request)
 
 					Expect(resp).To(BeNil())
 					Expect(response.Header().Get("Access-Control-Allow-Origin")).To(Equal(DEFAULT_CORS_ALLOW_ORIGIN))
@@ -65,7 +65,7 @@ var _ = Describe("CORS Middleware", func() {
 				It("should return a response with StopExecution", func() {
 					request.Method = "OPTIONS"
 					request.Header.Add("Origin", "*.invisionapp.com")
-					resp := CORS()(response, request)
+					resp := MiddlewareCORS()(response, request)
 
 					Expect(resp).ToNot(BeNil())
 					Expect(resp.StopExecution).To(BeTrue())

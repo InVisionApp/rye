@@ -34,7 +34,7 @@ func main() {
 	// If you perform a `curl -i http://localhost:8181/cors -H "Origin: *.foo.com"`
 	// you will see that the CORS middleware is adding required headers
 	routes.Handle("/cors", middlewareHandler.Handle([]rye.Handler{
-		rye.CORS(),
+		rye.MiddlewareCORS(),
 		homeHandler,
 	})).Methods("GET", "OPTIONS")
 
