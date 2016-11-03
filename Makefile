@@ -22,9 +22,9 @@ setup: installtools ## Install and setup tools and local DB
 
 # Under the hood, `go test -tags ...` also runs the "default" (unit) test case
 # in addition to the specified tags
-test: test/integration ## Perform both unit and integration tests
+test: installdeps test/integration ## Perform both unit and integration tests
 
-testv: testv/integration ## Perform both unit and integration tests (with verbose flags)
+testv: installdeps testv/integration ## Perform both unit and integration tests (with verbose flags)
 
 test/unit: ## Perform unit tests
 	go test -cover $(TEST_PACKAGES)
@@ -49,6 +49,9 @@ test/cover: ## Run all tests + open coverage report for all packages
 	done
 	go tool cover -html=.coverage
 	$(RM) .coverage .coverage.tmp
+
+installdeps: ## Install needed dependencies for various middlewares
+	go get github.com/dgrijalva/jwt-go
 
 installtools: ## Install development related tools
 	go get github.com/kardianos/govendor
