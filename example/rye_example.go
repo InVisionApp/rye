@@ -38,6 +38,14 @@ func main() {
 		homeHandler,
 	})).Methods("GET", "OPTIONS")
 
+	// If you perform an `curl -i http://localhost:8181/jwt \
+	// -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
+	// you will see that we are allowed through to the handler, if the sample token is changed, we will get a 401
+	routes.Handle("/jwt", middlewareHandler.Handle([]rye.Handler{
+		rye.NewMiddlewareJWT("secret"),
+		homeHandler,
+	})).Methods("GET")
+
 	routes.Handle("/error", middlewareHandler.Handle([]rye.Handler{
 		middlewareFirstHandler,
 		errorHandler,
