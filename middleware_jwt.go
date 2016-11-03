@@ -37,6 +37,13 @@ func NewMiddlewareJWT(secret string) func(rw http.ResponseWriter, req *http.Requ
 func (j *JwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response {
 	tokenHeader := req.Header.Get("Authorization")
 
+	if tokenHeader == "" {
+		return &Response{
+			Err:        fmt.Errorf("JWT token must be passed with Authorization header"),
+			StatusCode: 400,
+		}
+	}
+
 	// Remove 'Bearer' prefix
 	p, _ := regexp.Compile(`(?i)bearer\s+`)
 	j.token = p.ReplaceAllString(tokenHeader, "")

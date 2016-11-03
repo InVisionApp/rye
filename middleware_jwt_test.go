@@ -35,6 +35,14 @@ var _ = Describe("JWT Middleware", func() {
 			})
 		})
 
+		Context("when a valid token is passed", func() {
+			It("should return an error", func() {
+				resp := NewMiddlewareJWT(shared_secret)(response, request)
+				Expect(resp).ToNot(BeNil())
+				Expect(resp.Error()).To(ContainSubstring("JWT token must be passed"))
+			})
+		})
+
 		Context("when an invalid token is passed", func() {
 			It("should return an error", func() {
 				request.Header.Add("Authorization", "Bearer foo")
