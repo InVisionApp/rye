@@ -68,19 +68,19 @@ Here are some example (custom) handlers:
 
 ```go
 func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
-	fmt.Fprint(rw, "Refer to README.md for auth-api API usage")
-	return nil
+    fmt.Fprint(rw, "Refer to README.md for auth-api API usage")
+    return nil
 }
 
 func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
-	fmt.Fprint(rw, "This handler fires first.")
-	return nil
+    fmt.Fprint(rw, "This handler fires first.")
+    return nil
 }
 
 func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
-	return &rye.Response {
-    			StatusCode: http.StatusInternalServerError,
-    			Err:        errors.New(message),
+    return &rye.Response {
+                StatusCode: http.StatusInternalServerError,
+                Err:        errors.New(message),
     }
 }
 ```
@@ -128,9 +128,10 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 
 ### Middleware list
 
-| Name | Description |
-----------------------
+| Name                       | Description                           |
+|----------------------------|---------------------------------------|
 | [CORS](middleware_cors.go) | Provide CORS functionality for routes |
+| [JWT](middleware_jwt.go)   | Provide JWT validation                |
 
 ## API
 
