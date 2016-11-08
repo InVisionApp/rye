@@ -1,5 +1,7 @@
 
 [ ![Codeship Status for InVisionApp/rye](https://app.codeship.com/projects/5c4ac520-7fb8-0134-a813-165195a768fc/status?branch=master)](https://app.codeship.com/projects/181988)
+[![codecov](https://codecov.io/gh/InVisionApp/rye/branch/master/graph/badge.svg?token=hhqA1l88kx)](https://codecov.io/gh/InVisionApp/rye)
+
 
 <img align="right" src="rye.gif">
 
