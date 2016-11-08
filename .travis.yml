@@ -1,0 +1,13 @@
+language: go
+
+go:
+  - 1.7
+
+before_install:
+  - go get -t -v ./...
+
+script:
+  - make test/codecov
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash) -t 646f78c9-a2ed-4fec-8779-c94358d08b24

@@ -50,6 +50,16 @@ test/cover: ## Run all tests + open coverage report for all packages
 	go tool cover -html=.coverage
 	$(RM) .coverage .coverage.tmp
 
+test/codecov: ## Run all tests + open coverage report for all packages
+	for PKG in $(TEST_PACKAGES); do \
+		go test -covermode=$(COVERMODE) -coverprofile=profile.out $$PKG; \
+		if [ -f profile.out ]; then\
+			cat profile.out >> coverage.txt;\
+			rm profile.out;\
+		fi;\
+	done
+	$(RM) profile.out
+
 installdeps: ## Install needed dependencies for various middlewares
 	go get github.com/dgrijalva/jwt-go
 
