@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"time"
+	"github.com/onsi/gomega/types"
 )
 
 const (
@@ -36,6 +37,8 @@ var _ = Describe("Rye", func() {
 		response    *httptest.ResponseRecorder
 		mwHandler   *MWHandler
 		fakeStatter *statsdfakes.FakeStatter
+		inc					chan statsInc
+		timing			chan statsTiming
 	)
 
 	const (
@@ -56,6 +59,20 @@ var _ = Describe("Rye", func() {
 		}
 
 		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
+
+		inc = make(chan statsInc,2)
+		timing = make(chan statsTiming)
+
+		fakeStatter.IncStub = func(name string, time int64, statrate float32) error {
+			inc <- statsInc{name, time, statrate}
+			return nil
+		}
+
+		fakeStatter.TimingDurationStub = func(name string, time time.Duration, statrate float32) error {
+			timing <- statsTiming{name, time, statrate}
+			return nil
+		}
+
 	})
 
 	AfterEach(func() {
@@ -88,40 +105,15 @@ var _ = Describe("Rye", func() {
 		Context("when adding a valid handler", func() {
 			It("should return valid HandlerFunc", func() {
 
-				var (
-					actualInc    statsInc
-					actualTiming statsTiming
-				)
-
-				inc := make(chan statsInc)
-				timing := make(chan statsTiming)
-
-				fakeStatter.IncStub = func(name string, time int64, statrate float32) error {
-					inc <- statsInc{name, time, statrate}
-					close(inc)
-					return nil
-				}
-
-				fakeStatter.TimingDurationStub = func(name string, time time.Duration, statrate float32) error {
-					timing <- statsTiming{name, time, statrate}
-					close(timing)
-					return nil
-				}
-
 				h := mwHandler.Handle([]Handler{successHandler})
 				h.ServeHTTP(response, request)
-
-				actualInc = <-inc
-				actualTiming = <-timing
 
 				Expect(h).ToNot(BeNil())
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
 				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
-				Expect(actualInc.Name).To(Equal("handlers.successHandler.2xx"))
-				Expect(actualInc.Time).To(Equal(int64(1)))
-				Expect(actualInc.StatRate).To(Equal(float32(STATRATE)))
-				Expect(actualTiming.Name).To(Equal("handlers.successHandler.runtime"))
-				Expect(actualTiming.StatRate).To(Equal(float32(STATRATE)))
+
+				Eventually(inc).Should(Receive(&statsInc{"handlers.successHandler.2xx", 1, float32(STATRATE)}))
+				Eventually(timing).Should(Receive(HaveTiming("handlers.successHandler.runtime",float32(STATRATE))))
 			})
 		})
 
@@ -149,40 +141,15 @@ var _ = Describe("Rye", func() {
 		Context("when adding an erroneous handler", func() {
 			It("should interrupt handler chain and set a response status code", func() {
 
-				var (
-					actualInc    statsInc
-					actualTiming statsTiming
-				)
-
-				inc := make(chan statsInc)
-				timing := make(chan statsTiming)
-
-				fakeStatter.IncStub = func(name string, time int64, statrate float32) error {
-					inc <- statsInc{name, time, statrate}
-					close(inc)
-					return nil
-				}
-
-				fakeStatter.TimingDurationStub = func(name string, time time.Duration, statrate float32) error {
-					timing <- statsTiming{name, time, statrate}
-					close(timing)
-					return nil
-				}
-
 				h := mwHandler.Handle([]Handler{failureHandler})
 				h.ServeHTTP(response, request)
-
-				actualInc = <-inc
-				actualTiming = <-timing
 
 				Expect(h).ToNot(BeNil())
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
 				Expect(response.Code).To(Equal(505))
-				Expect(actualInc.Name).To(Equal("handlers.failureHandler.505"))
-				Expect(actualInc.Time).To(Equal(int64(1)))
-				Expect(actualInc.StatRate).To(Equal(float32(STATRATE)))
-				Expect(actualTiming.Name).To(Equal("handlers.failureHandler.runtime"))
-				Expect(actualTiming.StatRate).To(Equal(float32(STATRATE)))
+				Eventually(inc).Should(Receive(&statsInc{"handlers.failureHandler.505", 1, float32(STATRATE)}))
+				Eventually(inc).Should(Receive(&statsInc{"errors", 1, float32(STATRATE)}))
+				Eventually(timing).Should(Receive(HaveTiming("handlers.failureHandler.runtime",float32(STATRATE))))
 			})
 		})
 
@@ -244,3 +211,10 @@ func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *Response {
 }
 
 func testFunc() {}
+
+func HaveTiming(name string, statrate float32) types.GomegaMatcher {
+	return WithTransform(
+		func(p statsTiming) bool {
+			return p.Name == name && p.StatRate == statrate
+		}, BeTrue())
+}
