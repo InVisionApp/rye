@@ -35,7 +35,7 @@ var _ = Describe("JWT Middleware", func() {
 			})
 		})
 
-		Context("when a valid token is passed", func() {
+		Context("when no token is passed", func() {
 			It("should return an error", func() {
 				resp := NewMiddlewareJWT(shared_secret)(response, request)
 				Expect(resp).ToNot(BeNil())
