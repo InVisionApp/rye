@@ -78,8 +78,8 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						resp.StatusCode = http.StatusInternalServerError
 					}
 
-					if (m.Config.Statter != nil && resp.StatusCode >= 500) {
-						go m.Config.Statter.Inc("errors",1,m.Config.StatRate)
+					if m.Config.Statter != nil && resp.StatusCode >= 500 {
+						go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
 					}
 
 					statusCode = strconv.Itoa(resp.StatusCode)

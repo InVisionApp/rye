@@ -11,11 +11,11 @@ import (
 var _ = Describe("AccessToken Middleware", func() {
 
 	var (
-		request       *http.Request
-		response      *httptest.ResponseRecorder
+		request  *http.Request
+		response *httptest.ResponseRecorder
 
 		tokenHeaderName = "at-hname"
-		token1, token2 string
+		token1, token2  string
 	)
 
 	BeforeEach(func() {

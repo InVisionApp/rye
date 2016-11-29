@@ -11,8 +11,8 @@ import (
 var _ = Describe("CIDR Middleware", func() {
 
 	var (
-		request       *http.Request
-		response      *httptest.ResponseRecorder
+		request  *http.Request
+		response *httptest.ResponseRecorder
 
 		cidr1, cidr2, ip1, ip2, ip3 string
 	)

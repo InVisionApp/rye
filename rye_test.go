@@ -7,11 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/InVisionApp/rye/fakes/statsdfakes"
+	"github.com/onsi/gomega/types"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"time"
-	"github.com/onsi/gomega/types"
 )
 
 const (
@@ -37,8 +37,8 @@ var _ = Describe("Rye", func() {
 		response    *httptest.ResponseRecorder
 		mwHandler   *MWHandler
 		fakeStatter *statsdfakes.FakeStatter
-		inc					chan statsInc
-		timing			chan statsTiming
+		inc         chan statsInc
+		timing      chan statsTiming
 	)
 
 	const (
@@ -60,7 +60,7 @@ var _ = Describe("Rye", func() {
 
 		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
 
-		inc = make(chan statsInc,2)
+		inc = make(chan statsInc, 2)
 		timing = make(chan statsTiming)
 
 		fakeStatter.IncStub = func(name string, time int64, statrate float32) error {
@@ -113,7 +113,7 @@ var _ = Describe("Rye", func() {
 				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
 
 				Eventually(inc).Should(Receive(&statsInc{"handlers.successHandler.2xx", 1, float32(STATRATE)}))
-				Eventually(timing).Should(Receive(HaveTiming("handlers.successHandler.runtime",float32(STATRATE))))
+				Eventually(timing).Should(Receive(HaveTiming("handlers.successHandler.runtime", float32(STATRATE))))
 			})
 		})
 
@@ -149,7 +149,7 @@ var _ = Describe("Rye", func() {
 				Expect(response.Code).To(Equal(505))
 				Eventually(inc).Should(Receive(&statsInc{"handlers.failureHandler.505", 1, float32(STATRATE)}))
 				Eventually(inc).Should(Receive(&statsInc{"errors", 1, float32(STATRATE)}))
-				Eventually(timing).Should(Receive(HaveTiming("handlers.failureHandler.runtime",float32(STATRATE))))
+				Eventually(timing).Should(Receive(HaveTiming("handlers.failureHandler.runtime", float32(STATRATE))))
 			})
 		})
 
