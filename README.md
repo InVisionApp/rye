@@ -147,6 +147,7 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 | [CIDR](middleware_cidr.go) | Provide request IP whitelisting       |
 | [CORS](middleware_cors.go) | Provide CORS functionality for routes |
 | [JWT](middleware_jwt.go)   | Provide JWT validation                |
+| [Route Logger](middleware_routelogger.go)   | Provide basic logging for a specific route                |
 
 ## API
 
