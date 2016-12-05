@@ -1,12 +1,3 @@
-// This middleware provides request access token verification functionality
-//
-// Example use case:
-//
-//  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.NewMiddlewareAccessToken(tokenHeaderName, []string{token1, token2}),
-//     yourHandler,
-// })).Methods("POST")
-
 package rye
 
 import (
@@ -20,6 +11,17 @@ type accessTokens struct {
 	tokens     []string
 }
 
+/*
+NewMiddlewareAccessToken creates a new handler to verify access tokens in a rye chain.
+
+Example usage:
+
+	routes.Handle("/some/route", a.Dependencies.MWHandler.Handle(
+		[]rye.Handler{
+			rye.NewMiddlewareAccessToken(tokenHeaderName, []string{token1, token2}),
+			yourHandler,
+		})).Methods("POST")
+*/
 func NewMiddlewareAccessToken(headerName string, tokens []string) func(rw http.ResponseWriter, req *http.Request) *Response {
 	a := &accessTokens{
 		headerName: headerName,

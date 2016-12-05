@@ -16,16 +16,18 @@ import (
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
 //go:generate perl -pi -e 's/$GOPATH\/src\///g' fakes/statsdfakes/fake_statter.go
 
-// Middleware
+// MWHandler struct is used to configure and access rye's basic functionality.
 type MWHandler struct {
 	Config Config
 }
 
+// Config struct allows you to set a reference to a statsd.Statter and include it's stats rate.
 type Config struct {
 	Statter  statsd.Statter
 	StatRate float32
 }
 
+// JSONStatus is a simple container used for conveying status messages.
 type JSONStatus struct {
 	Message string `json:"message"`
 	Status  string `json:"status"`
@@ -41,21 +43,26 @@ type Response struct {
 	StopExecution bool
 }
 
-// Meet the Error interface
+// Error bubbles a response error providing an implementation of the Error interface.
+// It returns the error as a string.
 func (r *Response) Error() string {
 	return r.Err.Error()
 }
 
-//Handler Borrowed from http://laicos.com/writing-handsome-golang-middleware/
+// Handler is the primary type that any rye middleware must implement to be called in the Handle() function.
+// In order to use this you must return a *rye.Response.
 type Handler func(w http.ResponseWriter, r *http.Request) *Response
 
 // Constructor for new instantiating new rye instances
+// It returns a constructed *MWHandler instance.
 func NewMWHandler(config Config) *MWHandler {
 	return &MWHandler{
 		Config: config,
 	}
 }
 
+// The Handle function is the primary way to set up your chain of middlewares to be called by rye.
+// It returns a http.HandlerFunc from net/http that can be set as a route in your http server.
 func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, handler := range handlers {
@@ -113,7 +120,7 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	})
 }
 
-// Wrapper for WriteJSONResponse that returns a marshalled JSONStatus blob
+// WriteJSONStatus is a wrapper for WriteJSONResponse that returns a marshalled JSONStatus blob
 func WriteJSONStatus(rw http.ResponseWriter, status, message string, statusCode int) {
 	jsonData, _ := json.Marshal(&JSONStatus{
 		Message: message,
@@ -123,14 +130,15 @@ func WriteJSONStatus(rw http.ResponseWriter, status, message string, statusCode 
 	WriteJSONResponse(rw, statusCode, jsonData)
 }
 
-// Write data and status code to rw
+// WriteJSONResponse writes data and status code to the ResponseWriter
 func WriteJSONResponse(rw http.ResponseWriter, statusCode int, content []byte) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(statusCode)
 	rw.Write(content)
 }
 
-// Programmatically determine given function name (and perform string cleanup)
+// getFuncName uses reflection to determine a given function name
+// It returns a string version of the function name (and performs string cleanup)
 func getFuncName(i interface{}) string {
 	fullName := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 	ns := strings.Split(fullName, ".")

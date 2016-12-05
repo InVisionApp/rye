@@ -1,19 +1,3 @@
-// This middleware provides JWT verification functionality
-//
-// You can use this middleware by specifying `rye.NewMiddlewareJWT(shared_secret)`
-// when defining your routes.
-//
-// This middleware has no default version, it must be configured with a shared secret.
-//
-// Example use case:
-//
-// ```
-//  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.NewMiddlewareJWT("this is a big secret"),
-//     yourHandler,
-// })).Methods("PUT", "OPTIONS")
-// ```
-
 package rye
 
 import (
@@ -24,17 +8,33 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-type JwtVerify struct {
+type jwtVerify struct {
 	secret string
 	token  string
 }
 
+/*
+This middleware provides JWT verification functionality
+
+You can use this middleware by specifying `rye.NewMiddlewareJWT(shared_secret)`
+when defining your routes.
+
+This middleware has no default version, it must be configured with a shared secret.
+
+Example use case:
+
+	routes.Handle("/some/route", a.Dependencies.MWHandler.Handle(
+		[]rye.Handler{
+			rye.NewMiddlewareJWT("this is a big secret"),
+			yourHandler,
+		})).Methods("PUT", "OPTIONS")
+*/
 func NewMiddlewareJWT(secret string) func(rw http.ResponseWriter, req *http.Request) *Response {
-	j := &JwtVerify{secret: secret}
+	j := &jwtVerify{secret: secret}
 	return j.handle
 }
 
-func (j *JwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response {
+func (j *jwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response {
 	tokenHeader := req.Header.Get("Authorization")
 
 	if tokenHeader == "" {

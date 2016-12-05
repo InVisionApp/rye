@@ -1,3 +1,0 @@
-- name: Run tests
-  service: build
-  command: make testv

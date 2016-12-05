@@ -1,10 +1,9 @@
-
-[ ![Codeship Status for InVisionApp/rye](https://app.codeship.com/projects/5c4ac520-7fb8-0134-a813-165195a768fc/status?branch=master)](https://app.codeship.com/projects/181988)
-[![Build Status](https://travis-ci.com/InVisionApp/rye.svg?token=qgpSBc6cjHgbnjqC45af&branch=master)](https://travis-ci.com/InVisionApp/rye)
+[![DUB](https://img.shields.io/dub/l/vibe-d.svg)](LICENSE)
+[![Golang](https://img.shields.io/badge/Golang-v1.7-blue.svg)](https://golang.org/dl/)
+[![Travis Build Status](https://travis-ci.com/InVisionApp/rye.svg?token=qgpSBc6cjHgbnjqC45af&branch=master)](https://travis-ci.com/InVisionApp/rye)
 [![codecov](https://codecov.io/gh/InVisionApp/rye/branch/master/graph/badge.svg?token=hhqA1l88kx)](https://codecov.io/gh/InVisionApp/rye)
 
-
-<img align="right" src="rye.gif">
+<img align="right" src="images/rye_logo_invision_pink.png">
 
 # rye
 A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd metrics for use with DataDog or other logging aggregators. In addition, **rye** comes with various pre-built middleware handlers for enabling functionality such as CORS and rate/CIDR limiting.
@@ -12,12 +11,12 @@ A simple library to support http services. Currently, **rye** provides a middlew
 ## Setup
 In order to use **rye**, you should vendor it and the **statsd** client within your project.
 
-```
+```sh 
 govendor fetch github.com/cactus/go-statsd-client/statsd
-
+ 
 # Rye is a private repo, so we should clone it first
 mkdir -p $GOPATH/github.com/InVisionApp
-cd $GOPATH/github.com/InVisionApp
+cd $GOPATH/github.com/InVisionApp    
 git clone git@github.com:InVisionApp/rye.git
 
 govendor add github.com/InVisionApp/rye
@@ -33,9 +32,16 @@ govendor add github.com/InVisionApp/rye
 * Unified way for handlers and middlewares to return more detailed responses via the `rye.Response` struct (if they chose to do so).
 * Pre-built middlewares for things like CORS support
 
-## Writing custom middleware handlers
+## Example
 
-You can find a complete working example [here](example/rye_example.go).
+You can run an example locally to give it a try. The code for the example is [here](example/rye_example.go)! 
+
+```sh
+cd example
+go run rye_example.go
+```
+
+## Writing custom middleware handlers
 
 Begin by importing the required libraries:
 
@@ -203,3 +209,9 @@ All interfacing with the project is done via `make`. Targets exist for all prima
 - All (test, build): `make all`
 - .. and a few others. Run `make help` to see all available targets.
 - You can also test the project in Docker (and Codeship) by running `jet steps`
+
+## Contributing
+Fork the repository, write a PR and we'll consider it!
+
+## Special Thanks
+Thanks go out to Justin Reyna (InVisionApp.com) for the awesome logo!
