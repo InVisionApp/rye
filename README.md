@@ -1,6 +1,7 @@
 [![DUB](https://img.shields.io/dub/l/vibe-d.svg)](LICENSE)
-[![Codeship Status for InVisionApp/rye](https://app.codeship.com/projects/5c4ac520-7fb8-0134-a813-165195a768fc/status?branch=master)](https://app.codeship.com/projects/181988)
-[![Build Status](https://travis-ci.com/InVisionApp/rye.svg?token=qgpSBc6cjHgbnjqC45af&branch=master)](https://travis-ci.com/InVisionApp/rye)
+[![Golang](https://img.shields.io/badge/Golang-v1.7-blue.svg)](https://golang.org/dl/)
+[![Codeship Build Status](https://img.shields.io/codeship/5c4ac520-7fb8-0134-a813-165195a768fc.svg)](https://app.codeship.com/projects/181988)
+[![Travis Build Status](https://travis-ci.com/InVisionApp/rye.svg?token=qgpSBc6cjHgbnjqC45af&branch=master)](https://travis-ci.com/InVisionApp/rye)
 [![codecov](https://codecov.io/gh/InVisionApp/rye/branch/master/graph/badge.svg?token=hhqA1l88kx)](https://codecov.io/gh/InVisionApp/rye)
 
 
