@@ -1,12 +1,3 @@
-// This middleware provides request IP verification functionality
-//
-// Example use case:
-//
-//  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.NewMiddlewareCIDR(CIDRs), // []string of allowed CIDRs
-//     yourHandler,
-// })).Methods("POST")
-
 package rye
 
 import (
@@ -19,6 +10,18 @@ type cidr struct {
 	cidrs []string
 }
 
+/*
+NewMiddlewareCIDR creates a new handler to verify incoming IPs against a set of CIDR Notation strings in a rye chain.
+For reference on CIDR notation see https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing
+
+Example usage:
+
+	routes.Handle("/some/route", a.Dependencies.MWHandler.Handle(
+		[]rye.Handler{
+			rye.NewMiddlewareCIDR(CIDRs), // []string of allowed CIDRs
+			yourHandler,
+		})).Methods("POST")
+*/
 func NewMiddlewareCIDR(CIDRs []string) func(rw http.ResponseWriter, req *http.Request) *Response {
 	c := &cidr{cidrs: CIDRs}
 	return c.handle
