@@ -1,6 +1,6 @@
 // This middleware provides CORS functionality
 //
-// You can use this middleware by specifying `rye.CORS()` or `rye.NewCors(origin, methods, headers)`
+// You can use this middleware by specifying `rye.MiddlewareCORS()` or `rye.NewMiddlewareCORS(origin, methods, headers)`
 // when defining your routes.
 //
 // *Default* CORS Values:
@@ -16,14 +16,14 @@
 //
 // ```
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.CORS(), // use defaults for allowed origin, headers, methods
+//     rye.MiddlewareCORS(), // use defaults for allowed origin, headers, methods
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
 //
 // // OR
 //
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.NewCORS("*", "POST, GET", "SomeHeader, AnotherHeader"),
+//     rye.NewMiddlewareCORS("*", "POST, GET", "SomeHeader, AnotherHeader"),
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
 // ```

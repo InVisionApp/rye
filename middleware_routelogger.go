@@ -7,7 +7,7 @@
 //
 // ```
 //  routes.Handle("/some/route", a.Dependencies.MWHandler.Handle([]rye.Handler{
-//     rye.MiddlewareRouteLogger,
+//     rye.MiddlewareRouteLogger(),
 //     yourHandler,
 // })).Methods("PUT", "OPTIONS")
 // ```
