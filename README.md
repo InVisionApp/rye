@@ -1,5 +1,5 @@
-
-[ ![Codeship Status for InVisionApp/rye](https://app.codeship.com/projects/5c4ac520-7fb8-0134-a813-165195a768fc/status?branch=master)](https://app.codeship.com/projects/181988)
+[![DUB](https://img.shields.io/dub/l/vibe-d.svg)](LICENSE)
+[![Codeship Status for InVisionApp/rye](https://app.codeship.com/projects/5c4ac520-7fb8-0134-a813-165195a768fc/status?branch=master)](https://app.codeship.com/projects/181988)
 [![Build Status](https://travis-ci.com/InVisionApp/rye.svg?token=qgpSBc6cjHgbnjqC45af&branch=master)](https://travis-ci.com/InVisionApp/rye)
 [![codecov](https://codecov.io/gh/InVisionApp/rye/branch/master/graph/badge.svg?token=hhqA1l88kx)](https://codecov.io/gh/InVisionApp/rye)
 
@@ -210,3 +210,9 @@ All interfacing with the project is done via `make`. Targets exist for all prima
 - All (test, build): `make all`
 - .. and a few others. Run `make help` to see all available targets.
 - You can also test the project in Docker (and Codeship) by running `jet steps`
+
+## Contributing
+Fork the repository, write a PR and we'll consider it!
+
+## Special Thanks
+Thanks go out to Justin Reyna (InVisionApp.com) for the awesome logo!
