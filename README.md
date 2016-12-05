@@ -126,14 +126,14 @@ To use them, specify the constructor of the middleware as one of the middleware 
 ```go
 // example
 routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
-    rye.CORS(), // to use the CORS middleware (with defaults)
+    rye.MiddlewareCORS(), // to use the CORS middleware (with defaults)
     a.homeHandler,
 })).Methods("GET")
 
 OR 
 
 routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
-    rye.NewCORS("*", "GET, POST", "X-Access-Token"), // to use specific config when instantiating the middleware handler
+    rye.NewMiddlewareCORS("*", "GET, POST", "X-Access-Token"), // to use specific config when instantiating the middleware handler
     a.homeHandler,
 })).Methods("GET")
 
