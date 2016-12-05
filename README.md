@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/InVisionApp/rye/branch/master/graph/badge.svg?token=hhqA1l88kx)](https://codecov.io/gh/InVisionApp/rye)
 
 
-<img align="right" src="rye_logo_invision_pink.png">
+<img align="right" src="images/rye_logo_invision_pink.png">
 
 # rye
 A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd metrics for use with DataDog or other logging aggregators. In addition, **rye** comes with various pre-built middleware handlers for enabling functionality such as CORS and rate/CIDR limiting.
