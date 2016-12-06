@@ -128,7 +128,7 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 
 			// stop executing rest of the
 			// handlers if we encounter an error
-			if resp != nil && resp.Err != nil {
+			if resp != nil && (resp.StopExecution || resp.Err != nil) {
 				return
 			}
 		}
