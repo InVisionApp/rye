@@ -1,6 +1,7 @@
 package rye
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -41,7 +42,7 @@ type Response struct {
 	Err           error
 	StatusCode    int
 	StopExecution bool
-	NewRequest    *http.Request
+	Context	    	context.Context
 }
 
 // Error bubbles a response error providing an implementation of the Error interface.
@@ -79,13 +80,15 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						return
 					}
 
-					if resp.NewRequest != nil {
-						r = resp.NewRequest
+					// If a context is returned, we will
+					// replace the current request with a new request
+					if resp.Context != nil {
+						r = r.WithContext(resp.Context)
 					}
 
 					// Middleware did something funky - returned a *Response
 					// but did not set an error;
-					if resp.Err == nil && resp.NewRequest == nil {
+					if resp.Err == nil && resp.Context == nil {
 						resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
 						resp.StatusCode = http.StatusInternalServerError
 					}
@@ -94,7 +97,7 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
 					}
 
-					if resp.NewRequest == nil {
+					if resp.Context == nil {
 						statusCode = strconv.Itoa(resp.StatusCode)
 						WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
 					}
@@ -120,7 +123,7 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 			}()
 
 			// stop executing rest of the handlers if we encounter an error
-			if resp != nil && resp.NewRequest == nil {
+			if resp != nil && resp.Context == nil {
 				return
 			}
 		}

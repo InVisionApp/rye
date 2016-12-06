@@ -105,7 +105,7 @@ func stashContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response 
 	}
 	ctx = context.WithValue(ctx,"query-string-ctx",toContext)
 	log.Infof("Me")
-	return &rye.Response{NewRequest:r.WithContext(ctx)}
+	return &rye.Response{Context:ctx}
 }
 
 func logContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
