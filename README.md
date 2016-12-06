@@ -123,7 +123,7 @@ Example: If you have a middleware handler you've created with a method named `lo
 
 _If you're sending your logs into a system such as DataDog, be aware that your stats from Rye can have prefixes such as `statsd.my-service.my-k8s-cluster.handlers.loginHandler.2xx` or even `statsd.my-service.my-k8s-cluster.errors`. Just keep in mind your stats could end up in the destination sink system with prefixes._
 
-### Using with Golang 1.7 Context
+## Using with Golang 1.7 Context
 
 With Golang 1.7, a new feature has been added that supports a request specific context. This is a great feature that Rye supports out-of-the-box. The tricky part of this is how the context is modified on the request. In Golang, the Context is always available on a Request through `http.Request.Context()`. Great! However, if you want to add key/value pairs to the context, you will have to add the context to the request before it gets passed to the next Middleware. To support this, the `rye.Response` has a property called `Context`. This property takes a properly created context (pulled from the `request.Context()` function. When you return a `rye.Response` which has `Context`, the **rye** library will craft a new Request and make sure that the next middleware receives that request. 
 
