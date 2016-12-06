@@ -31,7 +31,9 @@ var _ = Describe("JWT Middleware", func() {
 			It("should return nil", func() {
 				request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", hs256_jwt))
 				resp := NewMiddlewareJWT(shared_secret)(response, request)
-				Expect(resp).To(BeNil())
+				Expect(resp).ToNot(BeNil())
+				Expect(resp.Context).ToNot(BeNil())
+				Expect(resp.Context.Value(CONTEXT_JWT)).To(Equal(hs256_jwt))
 			})
 		})
 

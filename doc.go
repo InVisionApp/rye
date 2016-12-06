@@ -78,6 +78,54 @@ Example: If you have a middleware handler you've created with a method named `lo
 
 If you're sending your logs into a system such as DataDog, be aware that your stats from Rye can have prefixes such as `statsd.my-service.my-k8s-cluster.handlers.loginHandler.2xx` or even `statsd.my-service.my-k8s-cluster.errors`. Just keep in mind your stats could end up in the destination sink system with prefixes.
 
+
+Using With Golang Context
+
+With Golang 1.7, a new feature has been added that supports a request specific context.
+This is a great feature that Rye supports out-of-the-box. The tricky part of this is how the context
+is modified on the request. In Golang, the Context is always available on a
+Request through `http.Request.Context()`. Great! However, if you want to add key/value pairs to the
+context, you will have to add the context to the request before it gets passed to the next Middleware.
+To support this, the `rye.Response` has a property called `Context`. This property takes a properly
+created context (pulled from the `request.Context()` function. When you return a `rye.Response`
+which has `Context`, the **rye** library will craft a new Request and make sure that the next middleware
+receives that request.
+
+Here's the details of creating a middleware with a proper `Context`. You must first pull from the
+current request `Context`. In the example below, you see `ctx := r.Context()`. That pulls the current
+context. Then, you create a NEW context with your additional context key/value. Finally, you
+return `&rye.Response{Context:ctx}`
+
+	func addContextVar(rw http.ResponseWriter, r *http.Request) *rye.Response {
+		// Retrieve the request's context
+		ctx := r.Context()
+
+		// Create a NEW context
+		ctx = context.WithValue(ctx,"CONTEXT_KEY","my context value")
+
+		// Return that in the Rye response
+		// Rye will add it to the Request to
+		// pass to the next middleware
+		return &rye.Response{Context:ctx}
+	}
+
+Now in a later middleware, you can easily retrieve the value you set!
+
+	func getContextVar(rw http.ResponseWriter, r *http.Request) *rye.Response {
+		// Retrieving the value is easy!
+		myVal := r.Context().Value("CONTEXT_KEY")
+
+		// Log it to the server log?
+		log.Infof("Context Value: %v", myVal)
+
+		return nil
+	}
+
+For another simple example, look in the JWT middleware - it adds the JWT into the
+context for use by other middlewares. It uses the `CONTEXT_JWT` key to push the
+JWT token into the `Context`.
+
+
 Using built-in middleware handlers
 
 Rye comes with various pre-built middleware handlers. Pre-built middlewares  source (and docs) can be found in the package dir following the pattern `middleware_*.go`.
@@ -96,6 +144,23 @@ OR
 			a.homeHandler,
 		})).Methods("GET")
 
+A Note on the JWT Middleware
+
+The JWT Middleware pushes the JWT token onto the Context for use by other middlewares in the chain.
+This is a convenience that allows any part of your middleware chain quick access to the JWT.
+Example usage might include a middleware that needs access to your user id or email address stored in the JWT.
+To access this `Context` variable, the code is very simple:
+
+	func getJWTfromContext(rw http.ResponseWriter, r *http.Request) *rye.Response {
+		// Retrieving the value is easy!
+		// Just reference the rye.CONTEXT_JWT const as a key
+		myVal := r.Context().Value(rye.CONTEXT_JWT)
+
+		// Log it to the server log?
+		log.Infof("Context Value: %v", myVal)
+
+		return nil
+	}
  */
 package rye
 

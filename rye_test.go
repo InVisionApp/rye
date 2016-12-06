@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"context"
 	"errors"
 	"fmt"
 	"github.com/InVisionApp/rye/fakes/statsdfakes"
@@ -128,6 +129,15 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when a handler returns a response with Context", func() {
+			It("should add that new context to the next passed request", func(){
+				h := mwHandler.Handle([]Handler{contextHandler,checkContextHandler})
+				h.ServeHTTP(response,request)
+
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
+			})
+		})
+
 		Context("when a handler returns a response with neither error or StopExecution set", func() {
 			It("should return a 500 + error message (and stop execution)", func() {
 				h := mwHandler.Handle([]Handler{badResponseHandler, successHandler})
@@ -187,6 +197,19 @@ var _ = Describe("Rye", func() {
 		})
 	})
 })
+
+func contextHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	ctx := context.WithValue(r.Context(),"test-val","exists")
+	return &Response{Context: ctx}
+}
+
+func checkContextHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	testVal := r.Context().Value("test-val")
+	if testVal == "exists" {
+		os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
+	}
+	return nil
+}
 
 func successHandler(rw http.ResponseWriter, r *http.Request) *Response {
 	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
