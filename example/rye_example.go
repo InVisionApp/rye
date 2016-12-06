@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"context"
 
 	"github.com/InVisionApp/rye"
 	log "github.com/Sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/gorilla/mux"
-	"golang.org/x/net/context"
 )
 
 func main() {
