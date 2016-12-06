@@ -1,11 +1,16 @@
 package rye
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
 
 	"github.com/dgrijalva/jwt-go"
+)
+
+const (
+	CONTEXT_JWT = "rye-middlewarejwt-jwt"
 )
 
 type jwtVerify struct {
@@ -28,6 +33,24 @@ Example use case:
 			rye.NewMiddlewareJWT("this is a big secret"),
 			yourHandler,
 		})).Methods("PUT", "OPTIONS")
+
+Additionally, this middleware puts the JWT token into the context for use by other
+middlewares in your chain.
+
+Access to that is simple (using the CONTEXT_JWT constant as a key)
+
+	func getJWTfromContext(rw http.ResponseWriter, r *http.Request) *rye.Response {
+
+		// Retrieving the value is easy!
+		// Just reference the rye.CONTEXT_JWT const as a key
+		myVal := r.Context().Value(rye.CONTEXT_JWT)
+
+		// Log it to the server log?
+		log.Infof("Context Value: %v", myVal)
+
+		return nil
+	}
+
 */
 func NewMiddlewareJWT(secret string) func(rw http.ResponseWriter, req *http.Request) *Response {
 	j := &jwtVerify{secret: secret}
@@ -35,6 +58,7 @@ func NewMiddlewareJWT(secret string) func(rw http.ResponseWriter, req *http.Requ
 }
 
 func (j *jwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response {
+
 	tokenHeader := req.Header.Get("Authorization")
 
 	if tokenHeader == "" {
@@ -62,5 +86,7 @@ func (j *jwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response 
 		}
 	}
 
-	return nil
+	ctx := context.WithValue(req.Context(),CONTEXT_JWT,j.token)
+
+	return &Response{Context:ctx}
 }

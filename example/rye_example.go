@@ -44,7 +44,7 @@ func main() {
 	// you will see that we are allowed through to the handler, if the sample token is changed, we will get a 401
 	routes.Handle("/jwt", middlewareHandler.Handle([]rye.Handler{
 		rye.NewMiddlewareJWT("secret"),
-		homeHandler,
+		getJwtFromContextHandler,
 	})).Methods("GET")
 
 	routes.Handle("/error", middlewareHandler.Handle([]rye.Handler{
@@ -53,6 +53,8 @@ func main() {
 		homeHandler,
 	})).Methods("GET")
 
+	// In order to pass in a context variable, this set of
+	// handlers works with "ctx" on the query string
 	routes.Handle("/context", middlewareHandler.Handle(
 		[]rye.Handler{
 			stashContextHandler,
@@ -94,24 +96,47 @@ func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 
 func stashContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	log.Infof("Stash Context handler has fired!")
+
+	// Retrieve the request's context
 	ctx := r.Context()
 
+	// A query string value to add to the context
 	toContext := r.URL.Query().Get("ctx")
+
 	if toContext != "" {
 		log.Infof("Adding `query-string-ctx` to request.Context(). Val: %v",toContext)
 	} else {
 		log.Infof("Adding default `query-string-ctx` value to context")
 		toContext = "No value added. Add querystring param `ctx` with a value to get it mirrored through context."
 	}
+
+	// Create a NEW context
 	ctx = context.WithValue(ctx,"query-string-ctx",toContext)
-	log.Infof("Me")
+
+	// Return that in the Rye response
+	// Rye will add it to the Request to
+	// pass to the next middleware
 	return &rye.Response{Context:ctx}
 }
 
 func logContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	log.Infof("Log Context handler has fired!")
+
+	// Retrieving a context value is EASY in subsequent middlewares
 	fromContext := r.Context().Value("query-string-ctx")
-	log.Infof("From context: %v",fromContext)
+
+	// Reflect that on the http response
 	fmt.Fprintf(rw,"Here's the `ctx` query string value you passed. Pulled from context: %v",fromContext)
+	return nil
+}
+
+// This handler pulls the JWT from the Context and echoes it through the request
+func getJwtFromContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
+	log.Infof("Log Context handler has fired!")
+
+	jwt := r.Context().Value(rye.CONTEXT_JWT)
+	if jwt != nil {
+		fmt.Fprintf(rw, "JWT found in Context: %v",jwt)
+	}
 	return nil
 }
