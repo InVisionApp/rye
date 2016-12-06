@@ -41,6 +41,7 @@ type Response struct {
 	Err           error
 	StatusCode    int
 	StopExecution bool
+	NewRequest    *http.Request
 }
 
 // Error bubbles a response error providing an implementation of the Error interface.
@@ -78,9 +79,13 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						return
 					}
 
+					if resp.NewRequest != nil {
+						r = resp.NewRequest
+					}
+
 					// Middleware did something funky - returned a *Response
 					// but did not set an error;
-					if resp.Err == nil {
+					if resp.Err == nil && resp.NewRequest == nil {
 						resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
 						resp.StatusCode = http.StatusInternalServerError
 					}
@@ -89,8 +94,10 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 						go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
 					}
 
-					statusCode = strconv.Itoa(resp.StatusCode)
-					WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
+					if resp.NewRequest == nil {
+						statusCode = strconv.Itoa(resp.StatusCode)
+						WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
+					}
 				}
 
 				handlerName := getFuncName(handler)
@@ -113,7 +120,7 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 			}()
 
 			// stop executing rest of the handlers if we encounter an error
-			if resp != nil {
+			if resp != nil && resp.NewRequest == nil {
 				return
 			}
 		}

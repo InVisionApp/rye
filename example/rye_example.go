@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/context"
 )
 
 func main() {
@@ -52,6 +53,12 @@ func main() {
 		homeHandler,
 	})).Methods("GET")
 
+	routes.Handle("/context", middlewareHandler.Handle(
+		[]rye.Handler{
+			stashContextHandler,
+			logContextHandler,
+	})).Methods("GET")
+
 	log.Infof("API server listening on %v", "localhost:8181")
 
 	srv := &http.Server{
@@ -83,4 +90,28 @@ func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 		StatusCode: http.StatusInternalServerError,
 		Err:        errors.New(message),
 	}
+}
+
+func stashContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
+	log.Infof("Stash Context handler has fired!")
+	ctx := r.Context()
+
+	toContext := r.URL.Query().Get("ctx")
+	if toContext != "" {
+		log.Infof("Adding `query-string-ctx` to request.Context(). Val: %v",toContext)
+	} else {
+		log.Infof("Adding default `query-string-ctx` value to context")
+		toContext = "No value added. Add querystring param `ctx` with a value to get it mirrored through context."
+	}
+	ctx = context.WithValue(ctx,"query-string-ctx",toContext)
+	log.Infof("Me")
+	return &rye.Response{NewRequest:r.WithContext(ctx)}
+}
+
+func logContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
+	log.Infof("Log Context handler has fired!")
+	fromContext := r.Context().Value("query-string-ctx")
+	log.Infof("From context: %v",fromContext)
+	fmt.Fprintf(rw,"Here's the `ctx` query string value you passed. Pulled from context: %v",fromContext)
+	return nil
 }
