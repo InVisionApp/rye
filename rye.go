@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	//log "github.com/Sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 )
 
@@ -76,31 +77,34 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 				startTime := time.Now()
 
 				if resp = handler(w, r); resp != nil {
-					if resp.StopExecution {
-						return
-					}
+					func() {
+						// Stop execution if it's passed
+						if resp.StopExecution {
+							return
+						}
 
-					// If a context is returned, we will
-					// replace the current request with a new request
-					if resp.Context != nil {
-						r = r.WithContext(resp.Context)
-					}
+						// If a context is returned, we will
+						// replace the current request with a new request
+						if resp.Context != nil {
+							r = r.WithContext(resp.Context)
+							return
+						}
 
-					// Middleware did something funky - returned a *Response
-					// but did not set an error;
-					if resp.Err == nil && resp.Context == nil {
-						resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
-						resp.StatusCode = http.StatusInternalServerError
-					}
+						// If there's no error but we have a response
+						if resp.Err == nil {
+							resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
+							resp.StatusCode = http.StatusInternalServerError
+						}
 
-					if m.Config.Statter != nil && resp.StatusCode >= 500 {
-						go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
-					}
+						// Now assume we have an error.
+						if m.Config.Statter != nil && resp.StatusCode >= 500 {
+							go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
+						}
 
-					if resp.Context == nil {
+						// Write the error out
 						statusCode = strconv.Itoa(resp.StatusCode)
 						WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
-					}
+					}()
 				}
 
 				handlerName := getFuncName(handler)
@@ -122,8 +126,9 @@ func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 				}
 			}()
 
-			// stop executing rest of the handlers if we encounter an error
-			if resp != nil && resp.Context == nil {
+			// stop executing rest of the
+			// handlers if we encounter an error
+			if resp != nil && resp.Err != nil {
 				return
 			}
 		}
