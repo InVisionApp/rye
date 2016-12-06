@@ -43,7 +43,7 @@ type Response struct {
 	Err           error
 	StatusCode    int
 	StopExecution bool
-	Context	    	context.Context
+	Context       context.Context
 }
 
 // Error bubbles a response error providing an implementation of the Error interface.

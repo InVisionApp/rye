@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"context"
 
 	"github.com/InVisionApp/rye"
 	log "github.com/Sirupsen/logrus"
@@ -59,7 +59,7 @@ func main() {
 		[]rye.Handler{
 			stashContextHandler,
 			logContextHandler,
-	})).Methods("GET")
+		})).Methods("GET")
 
 	log.Infof("API server listening on %v", "localhost:8181")
 
@@ -104,19 +104,19 @@ func stashContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response 
 	toContext := r.URL.Query().Get("ctx")
 
 	if toContext != "" {
-		log.Infof("Adding `query-string-ctx` to request.Context(). Val: %v",toContext)
+		log.Infof("Adding `query-string-ctx` to request.Context(). Val: %v", toContext)
 	} else {
 		log.Infof("Adding default `query-string-ctx` value to context")
 		toContext = "No value added. Add querystring param `ctx` with a value to get it mirrored through context."
 	}
 
 	// Create a NEW context
-	ctx = context.WithValue(ctx,"query-string-ctx",toContext)
+	ctx = context.WithValue(ctx, "query-string-ctx", toContext)
 
 	// Return that in the Rye response
 	// Rye will add it to the Request to
 	// pass to the next middleware
-	return &rye.Response{Context:ctx}
+	return &rye.Response{Context: ctx}
 }
 
 func logContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
@@ -126,7 +126,7 @@ func logContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
 	fromContext := r.Context().Value("query-string-ctx")
 
 	// Reflect that on the http response
-	fmt.Fprintf(rw,"Here's the `ctx` query string value you passed. Pulled from context: %v",fromContext)
+	fmt.Fprintf(rw, "Here's the `ctx` query string value you passed. Pulled from context: %v", fromContext)
 	return nil
 }
 
@@ -136,7 +136,7 @@ func getJwtFromContextHandler(rw http.ResponseWriter, r *http.Request) *rye.Resp
 
 	jwt := r.Context().Value(rye.CONTEXT_JWT)
 	if jwt != nil {
-		fmt.Fprintf(rw, "JWT found in Context: %v",jwt)
+		fmt.Fprintf(rw, "JWT found in Context: %v", jwt)
 	}
 	return nil
 }

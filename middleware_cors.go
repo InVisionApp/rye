@@ -1,10 +1,8 @@
-
 package rye
 
 import (
 	"net/http"
 )
-
 
 const (
 	// CORS Specific constants

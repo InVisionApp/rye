@@ -130,9 +130,9 @@ var _ = Describe("Rye", func() {
 		})
 
 		Context("when a handler returns a response with Context", func() {
-			It("should add that new context to the next passed request", func(){
-				h := mwHandler.Handle([]Handler{contextHandler,checkContextHandler})
-				h.ServeHTTP(response,request)
+			It("should add that new context to the next passed request", func() {
+				h := mwHandler.Handle([]Handler{contextHandler, checkContextHandler})
+				h.ServeHTTP(response, request)
 
 				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
 			})
@@ -199,7 +199,7 @@ var _ = Describe("Rye", func() {
 })
 
 func contextHandler(rw http.ResponseWriter, r *http.Request) *Response {
-	ctx := context.WithValue(r.Context(),"test-val","exists")
+	ctx := context.WithValue(r.Context(), "test-val", "exists")
 	return &Response{Context: ctx}
 }
 

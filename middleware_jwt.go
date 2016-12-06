@@ -86,7 +86,7 @@ func (j *jwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response 
 		}
 	}
 
-	ctx := context.WithValue(req.Context(),CONTEXT_JWT,j.token)
+	ctx := context.WithValue(req.Context(), CONTEXT_JWT, j.token)
 
-	return &Response{Context:ctx}
+	return &Response{Context: ctx}
 }
