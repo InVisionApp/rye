@@ -52,8 +52,8 @@ Create a statsd client (if desired) and create a rye Config in order to pass in 
 
 ```go
 config := &rye.Config{
-        Statter:          statsdClient,
-        StatRate:         DEFAULT_STATSD_RATE,
+    Statter:  statsdClient,
+    StatRate: DEFAULT_STATSD_RATE,
 }
 ```
 
@@ -83,9 +83,9 @@ func middlewareFirstHandler(rw http.ResponseWriter, r *http.Request) *rye.Respon
 }
 
 func errorHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
-    return &rye.Response {
-                StatusCode: http.StatusInternalServerError,
-                Err:        errors.New(message),
+    return &rye.Response{
+        StatusCode: http.StatusInternalServerError,
+        Err:        errors.New(message),
     }
 }
 ```
@@ -102,8 +102,8 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 log.Infof("API server listening on %v", ListenAddress)
 
 srv := &http.Server{
-    Addr:         ListenAddress,
-    Handler:      routes,
+    Addr:    ListenAddress,
+    Handler: routes,
 }
 
 srv.ListenAndServe()
@@ -127,28 +127,28 @@ Here's the details of creating a middleware with a proper `Context`. You must fi
 
 ```go
 func addContextVar(rw http.ResponseWriter, r *http.Request) *rye.Response {
-	// Retrieve the request's context
-	ctx := r.Context()
+    // Retrieve the request's context
+    ctx := r.Context()
 
-	// Create a NEW context
-	ctx = context.WithValue(ctx,"CONTEXT_KEY","my context value")
+    // Create a NEW context
+    ctx = context.WithValue(ctx,"CONTEXT_KEY","my context value")
 
-	// Return that in the Rye response 
-	// Rye will add it to the Request to 
-	// pass to the next middleware
-	return &rye.Response{Context:ctx}
+    // Return that in the Rye response 
+    // Rye will add it to the Request to 
+    // pass to the next middleware
+    return &rye.Response{Context:ctx}
 }
 ```
 Now in a later middleware, you can easily retrieve the value you set!
 ```go
 func getContextVar(rw http.ResponseWriter, r *http.Request) *rye.Response {
-	// Retrieving the value is easy!
-	myVal := r.Context().Value("CONTEXT_KEY")
+    // Retrieving the value is easy!
+    myVal := r.Context().Value("CONTEXT_KEY")
 
-	// Log it to the server log?
-	log.Infof("Context Value: %v", myVal)
-	
-	return nil
+    // Log it to the server log?
+    log.Infof("Context Value: %v", myVal)
+
+    return nil
 }
 ```
 For another simple example, look in the [JWT middleware](middleware_jwt.go) - it adds the JWT into the context for use by other middlewares. It uses the `CONTEXT_JWT` key to push the JWT token into the `Context`.
@@ -191,15 +191,15 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 
 The [JWT Middleware](middleware_jwt.go) pushes the JWT token onto the Context for use by other middlewares in the chain. This is a convenience that allows any part of your middleware chain quick access to the JWT. Example usage might include a middleware that needs access to your user id or email address stored in the JWT. To access this `Context` variable, the code is very simple:
 ```go
- func getJWTfromContext(rw http.ResponseWriter, r *http.Request) *rye.Response {
-	// Retrieving the value is easy!
-	// Just reference the rye.CONTEXT_JWT const as a key
-	myVal := r.Context().Value(rye.CONTEXT_JWT)
+func getJWTfromContext(rw http.ResponseWriter, r *http.Request) *rye.Response {
+    // Retrieving the value is easy!
+    // Just reference the rye.CONTEXT_JWT const as a key
+    myVal := r.Context().Value(rye.CONTEXT_JWT)
 
-	// Log it to the server log?
-	log.Infof("Context Value: %v", myVal)
-	
-	return nil
+    // Log it to the server log?
+    log.Infof("Context Value: %v", myVal)
+
+    return nil
 }
 ```
 
@@ -209,8 +209,8 @@ The [JWT Middleware](middleware_jwt.go) pushes the JWT token onto the Context fo
 This struct is configuration for the MWHandler. It holds references and config to dependencies such as the statsdClient.
 ```go
 type Config struct {
-    Statter          statsd.Statter
-    StatRate         float32
+    Statter  statsd.Statter
+    StatRate float32
 }
 ```
 
