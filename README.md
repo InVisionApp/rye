@@ -14,14 +14,8 @@ A simple library to support http services. Currently, **rye** provides a middlew
 In order to use **rye**, you should vendor it and the **statsd** client within your project.
 
 ```sh 
+govendor fetch github.com/InVisionApp/rye
 govendor fetch github.com/cactus/go-statsd-client/statsd
- 
-# Rye is a private repo, so we should clone it first
-mkdir -p $GOPATH/github.com/InVisionApp
-cd $GOPATH/github.com/InVisionApp    
-git clone git@github.com:InVisionApp/rye.git
-
-govendor add github.com/InVisionApp/rye
 ```
 
 ## Why another middleware lib?
