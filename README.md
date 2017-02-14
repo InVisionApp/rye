@@ -63,6 +63,14 @@ Create a middleware handler. The purpose of the Handler is to keep Config and to
 middlewareHandler := rye.NewMWHandler(config)
 ```
 
+Set up any global handlers by using the `Use()` method. Global handlers get pre-pended to the list of your handlers for EVERY endpoint.
+They are bound to the MWHandler struct. Therefore, you could set up multiple MWHandler structs if you want to have different collections
+of global handlers.
+
+```go
+middlewareHandler.Use(middleware_routelogger)
+```
+
 Build your http handlers using the Handler type from the **rye** package.
 
 ```go
@@ -225,6 +233,14 @@ type MWHandler struct {
 #### Constructor
 ```go
 func NewMWHandler(statter statsd.Statter, statrate float32) *MWHandler
+```
+
+#### Use
+This method prepends a global handler for every Handle method you call.
+Use this multiple times to setup global handlers for every endpoint.
+Call `Use()` for each global handler before setting up additional routes.
+```go
+func (m *MWHandler) Use(handlers Handler)
 ```
 
 #### Handle

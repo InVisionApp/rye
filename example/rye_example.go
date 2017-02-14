@@ -25,6 +25,8 @@ func main() {
 
 	middlewareHandler := rye.NewMWHandler(config)
 
+	middlewareHandler.Use(beforeAllHandler)
+
 	routes := mux.NewRouter().StrictSlash(true)
 
 	routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
@@ -69,6 +71,11 @@ func main() {
 	}
 
 	srv.ListenAndServe()
+}
+
+func beforeAllHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
+	log.Infof("This handler is called before every endpoint: %+v", r)
+	return nil
 }
 
 func homeHandler(rw http.ResponseWriter, r *http.Request) *rye.Response {
