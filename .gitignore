@@ -3,3 +3,6 @@ env-api
 main
 .tmp
 codeship.aes
+.vscode/
+.idea/
+

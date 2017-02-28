@@ -1,22 +1,26 @@
 package rye
 
 import (
+	"strconv"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"context"
 	"errors"
 	"fmt"
-	"github.com/InVisionApp/rye/fakes/statsdfakes"
-	"github.com/onsi/gomega/types"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"time"
+
+	"github.com/InVisionApp/rye/fakes/statsdfakes"
+	"github.com/onsi/gomega/types"
 )
 
 const (
 	RYE_TEST_HANDLER_ENV_VAR = "RYE_TEST_HANDLER_PASS"
+	RYE_TEST_BEFORE_ENV_VAR  = "RYE_TEST_HANDLER_BEFORE_PASS"
 )
 
 type statsInc struct {
@@ -37,6 +41,7 @@ var _ = Describe("Rye", func() {
 		request     *http.Request
 		response    *httptest.ResponseRecorder
 		mwHandler   *MWHandler
+		ryeConfig   Config
 		fakeStatter *statsdfakes.FakeStatter
 		inc         chan statsInc
 		timing      chan statsTiming
@@ -48,7 +53,7 @@ var _ = Describe("Rye", func() {
 
 	BeforeEach(func() {
 		fakeStatter = &statsdfakes.FakeStatter{}
-		ryeConfig := Config{
+		ryeConfig = Config{
 			Statter:  fakeStatter,
 			StatRate: STATRATE,
 		}
@@ -60,6 +65,7 @@ var _ = Describe("Rye", func() {
 		}
 
 		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
+		os.Unsetenv(RYE_TEST_BEFORE_ENV_VAR)
 
 		inc = make(chan statsInc, 2)
 		timing = make(chan statsTiming)
@@ -115,6 +121,24 @@ var _ = Describe("Rye", func() {
 
 				Eventually(inc).Should(Receive(&statsInc{"handlers.successHandler.2xx", 1, float32(STATRATE)}))
 				Eventually(timing).Should(Receive(HaveTiming("handlers.successHandler.runtime", float32(STATRATE))))
+			})
+		})
+
+		Context("when adding a global handler it should get called for multiple handler chains", func() {
+			It("should execute before handlers and end in success", func() {
+
+				handlerWithGlobals := NewMWHandler(ryeConfig)
+				handlerWithGlobals.Use(beforeHandler)
+				handlerWithGlobals.Use(beforeHandler)
+				handlerWithGlobals.Use(beforeHandler)
+
+				h := handlerWithGlobals.Handle([]Handler{successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(h).ToNot(BeNil())
+				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
+				Expect(os.Getenv(RYE_TEST_BEFORE_ENV_VAR)).To(Equal("3"))
 			})
 		})
 
@@ -176,6 +200,7 @@ var _ = Describe("Rye", func() {
 				Expect(fakeStatter.TimingDurationCallCount()).To(Equal(0))
 			})
 		})
+
 	})
 
 	Describe("getFuncName", func() {
@@ -197,6 +222,17 @@ var _ = Describe("Rye", func() {
 		})
 	})
 })
+
+func beforeHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	counter := os.Getenv(RYE_TEST_BEFORE_ENV_VAR)
+	counterInt, err := strconv.Atoi(counter)
+	if err != nil {
+		counterInt = 0
+	}
+	counterInt++
+	os.Setenv(RYE_TEST_BEFORE_ENV_VAR, strconv.Itoa(counterInt))
+	return nil
+}
 
 func contextHandler(rw http.ResponseWriter, r *http.Request) *Response {
 	ctx := context.WithValue(r.Context(), "test-val", "exists")
