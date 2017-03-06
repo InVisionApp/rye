@@ -5,4 +5,5 @@ main
 codeship.aes
 .vscode/
 .idea/
-
+debug
+debug.test

@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	RYE_TEST_HANDLER_ENV_VAR = "RYE_TEST_HANDLER_PASS"
-	RYE_TEST_BEFORE_ENV_VAR  = "RYE_TEST_HANDLER_BEFORE_PASS"
+	RYE_TEST_HANDLER_ENV_VAR   = "RYE_TEST_HANDLER_PASS"
+	RYE_TEST_HANDLER_2_ENV_VAR = "RYE_TEST_HANDLER_2_PASS"
+	RYE_TEST_BEFORE_ENV_VAR    = "RYE_TEST_HANDLER_BEFORE_PASS"
 )
 
 type statsInc struct {
@@ -66,6 +67,7 @@ var _ = Describe("Rye", func() {
 
 		os.Unsetenv(RYE_TEST_HANDLER_ENV_VAR)
 		os.Unsetenv(RYE_TEST_BEFORE_ENV_VAR)
+		os.Unsetenv(RYE_TEST_HANDLER_2_ENV_VAR)
 
 		inc = make(chan statsInc, 2)
 		timing = make(chan statsTiming)
@@ -125,6 +127,7 @@ var _ = Describe("Rye", func() {
 		})
 
 		Context("when adding a global handler it should get called for multiple handler chains", func() {
+
 			It("should execute before handlers and end in success", func() {
 
 				handlerWithGlobals := NewMWHandler(ryeConfig)
@@ -139,6 +142,35 @@ var _ = Describe("Rye", func() {
 				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
 				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
 				Expect(os.Getenv(RYE_TEST_BEFORE_ENV_VAR)).To(Equal("3"))
+			})
+
+			It("should execute before handlers and multiple Handles should manage their closure correctly", func() {
+
+				handlerWithGlobals := NewMWHandler(ryeConfig)
+				handlerWithGlobals.Use(beforeHandler)
+				handlerWithGlobals.Use(beforeHandler)
+				handlerWithGlobals.Use(beforeHandler)
+
+				h := handlerWithGlobals.Handle([]Handler{successHandler})
+
+				h2 := handlerWithGlobals.Handle([]Handler{success2Handler})
+
+				h.ServeHTTP(response, request)
+				h2.ServeHTTP(response, request)
+
+				Expect(h).ToNot(BeNil())
+				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
+
+				Expect(h2).ToNot(BeNil())
+				Expect(h2).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
+
+				before := os.Getenv(RYE_TEST_BEFORE_ENV_VAR)
+				handler1 := os.Getenv(RYE_TEST_HANDLER_ENV_VAR)
+				handler2 := os.Getenv(RYE_TEST_HANDLER_2_ENV_VAR)
+
+				Expect(before).To(Equal("6"))
+				Expect(handler1).To(Equal("1"))
+				Expect(handler2).To(Equal("1"))
 			})
 		})
 
@@ -249,6 +281,11 @@ func checkContextHandler(rw http.ResponseWriter, r *http.Request) *Response {
 
 func successHandler(rw http.ResponseWriter, r *http.Request) *Response {
 	os.Setenv(RYE_TEST_HANDLER_ENV_VAR, "1")
+	return nil
+}
+
+func success2Handler(rw http.ResponseWriter, r *http.Request) *Response {
+	os.Setenv(RYE_TEST_HANDLER_2_ENV_VAR, "1")
 	return nil
 }
 
