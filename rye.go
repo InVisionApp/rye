@@ -73,9 +73,9 @@ func (m *MWHandler) Use(handler Handler) {
 
 // The Handle function is the primary way to set up your chain of middlewares to be called by rye.
 // It returns a http.HandlerFunc from net/http that can be set as a route in your http server.
-func (m *MWHandler) Handle(handlers []Handler) http.Handler {
+func (m *MWHandler) Handle(customHandlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlers := append(m.beforeHandlers, handlers...)
+		handlers := append(m.beforeHandlers, customHandlers...)
 		for _, handler := range handlers {
 			var resp *Response
 
