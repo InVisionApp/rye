@@ -75,7 +75,7 @@ func (m *MWHandler) Use(handler Handler) {
 // It returns a http.HandlerFunc from net/http that can be set as a route in your http server.
 func (m *MWHandler) Handle(handlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlers = append(m.beforeHandlers, handlers...)
+		handlers := append(m.beforeHandlers, handlers...)
 		for _, handler := range handlers {
 			var resp *Response
 
