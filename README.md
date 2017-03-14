@@ -183,7 +183,41 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 
 ```
 
+## Serving Static Files
 
+Rye has the ability to add serving static files in the chain. Two handlers 
+have been provided: `StaticFilesystem` and `StaticFile`. These middlewares 
+should always be used at the end of the chain. Their configuration is 
+simply based on an absolute path on the server and possibly a skipped 
+path prefix.
+
+The use case here could be a powerful one. Rye allows you to serve a filesystem 
+just as a whole or a single file. Used together you could facilitate an application 
+which does both -> fulfilling the capability to provide a single page application. 
+For example, if you had a webpack application which served static resources and 
+artifacts, you would use the `StaticFilesystem` to serve those. Then you'd use 
+`StaticFile` to serve the single page which refers to the single-page application 
+through `index.html`. 
+
+A full sample is provided in the `static-examples` folder. Here's a snippet from 
+the example using Gorilla:
+
+```go
+    pwd, err := os.Getwd()
+    if err != nil {
+        log.Fatalf("NewStaticFile: Could not get working directory.")
+    }
+
+    routes.PathPrefix("/dist/").Handler(middlewareHandler.Handle([]rye.Handler{
+        rye.MiddlewareRouteLogger(),
+        rye.NewStaticFilesystem(pwd+"/dist/", "/dist/"),
+    }))
+
+    routes.PathPrefix("/ui/").Handler(middlewareHandler.Handle([]rye.Handler{
+        rye.MiddlewareRouteLogger(),
+        rye.NewStaticFile(pwd + "/dist/index.html"),
+    }))
+```
 
 ### Middleware list
 
@@ -193,7 +227,10 @@ routes.Handle("/", middlewareHandler.Handle([]rye.Handler{
 | [CIDR](middleware_cidr.go) | Provide request IP whitelisting       |
 | [CORS](middleware_cors.go) | Provide CORS functionality for routes |
 | [JWT](middleware_jwt.go)   | Provide JWT validation                |
-| [Route Logger](middleware_routelogger.go)   | Provide basic logging for a specific route                |
+| [Route Logger](middleware_routelogger.go)   | Provide basic logging for a specific route |
+| [Static File](middleware_static_file.go) | Provides serving a single file |
+| [Static Filesystem](middleware_static_filesystem.go) | Provides serving a single file |
+
 
 ### A Note on the JWT Middleware
 
