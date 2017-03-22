@@ -49,7 +49,9 @@ func newAccessTokenHandler(name string, tokens []string, tokenType string) func(
 		tokens:    tokens,
 	}
 
-	if tokenType == "query" {
+	switch tokenType {
+
+	case "query":
 		a.getFunc = func(s string, r *http.Request) string {
 			q, ok := r.URL.Query()[s]
 			if !ok {
@@ -60,14 +62,13 @@ func newAccessTokenHandler(name string, tokens []string, tokenType string) func(
 		}
 		a.missingMessage = fmt.Sprintf("No access token found; ensure you pass the '%s' parameter", name)
 
-		return a.handle
+	default:
+		// default to using the header
+		a.getFunc = func(s string, r *http.Request) string {
+			return r.Header.Get(s)
+		}
+		a.missingMessage = fmt.Sprintf("No access token found; ensure you pass '%s' in header", name)
 	}
-
-	// default to using the header
-	a.getFunc = func(s string, r *http.Request) string {
-		return r.Header.Get(s)
-	}
-	a.missingMessage = fmt.Sprintf("No access token found; ensure you pass '%s' in header", name)
 
 	return a.handle
 }
