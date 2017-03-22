@@ -25,7 +25,7 @@ Example usage:
 		})).Methods("POST")
 */
 func NewMiddlewareAccessToken(headerName string, tokens []string) func(rw http.ResponseWriter, req *http.Request) *Response {
-	return newAccessTokenHandler(headerName, tokens, true)
+	return newAccessTokenHandler(headerName, tokens, "header")
 }
 
 /*
@@ -40,23 +40,16 @@ Example usage:
 		})).Methods("POST")
 */
 func NewMiddlewareAccessQueryToken(queryParamName string, tokens []string) func(rw http.ResponseWriter, req *http.Request) *Response {
-	return newAccessTokenHandler(queryParamName, tokens, false)
+	return newAccessTokenHandler(queryParamName, tokens, "query")
 }
 
-func newAccessTokenHandler(name string, tokens []string, headerToken bool) func(rw http.ResponseWriter, req *http.Request) *Response {
+func newAccessTokenHandler(name string, tokens []string, tokenType string) func(rw http.ResponseWriter, req *http.Request) *Response {
 	a := &accessTokens{
 		paramName: name,
 		tokens:    tokens,
 	}
 
-	switch headerToken {
-	case true:
-		a.getFunc = func(s string, r *http.Request) string {
-			return r.Header.Get(s)
-		}
-		a.missingMessage = fmt.Sprintf("No access token found; ensure you pass '%s' in header", name)
-
-	case false:
+	if tokenType == "query" {
 		a.getFunc = func(s string, r *http.Request) string {
 			q, ok := r.URL.Query()[s]
 			if !ok {
@@ -66,7 +59,15 @@ func newAccessTokenHandler(name string, tokens []string, headerToken bool) func(
 			return q[0]
 		}
 		a.missingMessage = fmt.Sprintf("No access token found; ensure you pass the '%s' parameter", name)
+
+		return a.handle
 	}
+
+	// default to using the header
+	a.getFunc = func(s string, r *http.Request) string {
+		return r.Header.Get(s)
+	}
+	a.missingMessage = fmt.Sprintf("No access token found; ensure you pass '%s' in header", name)
 
 	return a.handle
 }
