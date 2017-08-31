@@ -117,6 +117,10 @@ func (m *MWHandler) Handle(customHandlers []Handler) http.Handler {
 
 				handlerName := getFuncName(handler)
 
+				if resp != nil && resp.StatusCode >= 400 {
+					statusCode = strconv.Itoa(resp.StatusCode)
+				}
+
 				if m.Config.Statter != nil {
 					// Record runtime metric
 					go m.Config.Statter.TimingDuration(
