@@ -75,72 +75,88 @@ func (m *MWHandler) Use(handler Handler) {
 // It returns a http.HandlerFunc from net/http that can be set as a route in your http server.
 func (m *MWHandler) Handle(customHandlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlers := append(m.beforeHandlers, customHandlers...)
-		for _, handler := range handlers {
-			var resp *Response
+		exit := false
+		for _, handler := range m.beforeHandlers {
+			exit, r = m.do(w, r, handler)
+			if exit {
+				return
+			}
+		}
 
-			// Record handler runtime
-			func() {
-				statusCode := "2xx"
-				startTime := time.Now()
-
-				if resp = handler(w, r); resp != nil {
-					func() {
-						// Stop execution if it's passed
-						if resp.StopExecution {
-							return
-						}
-
-						// If a context is returned, we will
-						// replace the current request with a new request
-						if resp.Context != nil {
-							r = r.WithContext(resp.Context)
-							return
-						}
-
-						// If there's no error but we have a response
-						if resp.Err == nil {
-							resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
-							resp.StatusCode = http.StatusInternalServerError
-						}
-
-						// Now assume we have an error.
-						if m.Config.Statter != nil && resp.StatusCode >= 500 {
-							go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
-						}
-
-						// Write the error out
-						statusCode = strconv.Itoa(resp.StatusCode)
-						WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
-					}()
-				}
-
-				handlerName := getFuncName(handler)
-
-				if m.Config.Statter != nil {
-					// Record runtime metric
-					go m.Config.Statter.TimingDuration(
-						"handlers."+handlerName+".runtime",
-						time.Since(startTime), // delta
-						m.Config.StatRate,
-					)
-
-					// Record status code metric (default 2xx)
-					go m.Config.Statter.Inc(
-						"handlers."+handlerName+"."+statusCode,
-						1,
-						m.Config.StatRate,
-					)
-				}
-			}()
-
-			// stop executing rest of the
-			// handlers if we encounter an error
-			if resp != nil && (resp.StopExecution || resp.Err != nil) {
+		for _, handler := range customHandlers {
+			exit, r = m.do(w, r, handler)
+			if exit {
 				return
 			}
 		}
 	})
+}
+
+func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) (bool, *http.Request) {
+	var resp *Response
+
+	// Record handler runtime
+	func() {
+		statusCode := "2xx"
+		startTime := time.Now()
+
+		if resp = handler(w, r); resp != nil {
+			func() {
+				// Stop execution if it's passed
+				if resp.StopExecution {
+					return
+				}
+
+				// If a context is returned, we will
+				// replace the current request with a new request
+				if resp.Context != nil {
+					r = r.WithContext(resp.Context)
+					return
+				}
+
+				// If there's no error but we have a response
+				if resp.Err == nil {
+					resp.Err = errors.New("Problem with middleware; neither Err or StopExecution is set")
+					resp.StatusCode = http.StatusInternalServerError
+				}
+
+				// Now assume we have an error.
+				if m.Config.Statter != nil && resp.StatusCode >= 500 {
+					go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
+				}
+
+				// Write the error out
+				statusCode = strconv.Itoa(resp.StatusCode)
+				WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
+			}()
+		}
+
+		handlerName := getFuncName(handler)
+
+		if m.Config.Statter != nil {
+			// Record runtime metric
+			go m.Config.Statter.TimingDuration(
+				"handlers."+handlerName+".runtime",
+				time.Since(startTime), // delta
+				m.Config.StatRate,
+			)
+
+			// Record status code metric (default 2xx)
+			go m.Config.Statter.Inc(
+				"handlers."+handlerName+"."+statusCode,
+				1,
+				m.Config.StatRate,
+			)
+		}
+	}()
+
+	// stop executing rest of the
+	// handlers if we encounter an error
+	if resp != nil && (resp.StopExecution || resp.Err != nil) {
+		return true, r
+	}
+
+	return false, r
 }
 
 // WriteJSONStatus is a wrapper for WriteJSONResponse that returns a marshalled JSONStatus blob

@@ -185,9 +185,33 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when a before handler returns a response with StopExecution", func() {
+			It("should not execute any further handlers", func() {
+				request.Method = "OPTIONS"
+
+				mwHandler.beforeHandlers = []Handler{stopExecutionHandler}
+
+				h := mwHandler.Handle([]Handler{successHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
+			})
+		})
+
 		Context("when a handler returns a response with Context", func() {
 			It("should add that new context to the next passed request", func() {
 				h := mwHandler.Handle([]Handler{contextHandler, checkContextHandler})
+				h.ServeHTTP(response, request)
+
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
+			})
+		})
+
+		Context("when a beforehandler returns a response with Context", func() {
+			It("should add that new context to the next passed request", func() {
+				mwHandler.beforeHandlers = []Handler{contextHandler}
+
+				h := mwHandler.Handle([]Handler{checkContextHandler})
 				h.ServeHTTP(response, request)
 
 				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).To(Equal("1"))
