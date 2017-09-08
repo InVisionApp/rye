@@ -99,8 +99,9 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 	func() {
 		statusCode := "2xx"
 		startTime := time.Now()
+		resp = handler(w, r)
 
-		if resp = handler(w, r); resp != nil {
+		if resp != nil {
 			func() {
 				// Stop execution if it's passed
 				if resp.StopExecution {
@@ -129,6 +130,10 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 				statusCode = strconv.Itoa(resp.StatusCode)
 				WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
 			}()
+		}
+
+		if resp != nil && resp.StatusCode > 0 {
+			statusCode = strconv.Itoa(resp.StatusCode)
 		}
 
 		handlerName := getFuncName(handler)

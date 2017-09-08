@@ -185,6 +185,16 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when a handler returns a response with StopExecution and StatusCode", func() {
+			It("should not execute any further handlers", func() {
+				h := mwHandler.Handle([]Handler{stopExecutionWithStatusHandler, successHandler})
+				h.ServeHTTP(response, request)
+
+				Eventually(inc).Should(Receive(&statsInc{"handlers.stopExecutionWithStatusHandler.404", 1, float32(STATRATE)}))
+				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
+			})
+		})
+
 		Context("when a before handler returns a response with StopExecution", func() {
 			It("should not execute any further handlers", func() {
 				request.Method = "OPTIONS"
@@ -327,6 +337,13 @@ func failureHandler(rw http.ResponseWriter, r *http.Request) *Response {
 func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *Response {
 	return &Response{
 		StopExecution: true,
+	}
+}
+
+func stopExecutionWithStatusHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	return &Response{
+		StopExecution: true,
+		StatusCode:    404,
 	}
 }
 
