@@ -1,21 +1,21 @@
 package rye
 
 import (
-	"strconv"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"time"
 
-	"github.com/InVisionApp/rye/fakes/statsdfakes"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+
+	"github.com/InVisionApp/rye/fakes/statsdfakes"
 )
 
 const (
@@ -277,6 +277,24 @@ var _ = Describe("Rye", func() {
 			})
 		})
 	})
+
+	var _ = Describe("WriteJSONResponse", func() {
+		Context("when writing nil content", func() {
+			It("should return valid HandlerFunc", func() {
+				h := mwHandler.Handle([]Handler{writeNILHandler})
+				Expect(h).ToNot(BeNil())
+
+				h.ServeHTTP(response, request)
+
+				Expect(response.Code).To(Equal(http.StatusOK))
+				b, err := ioutil.ReadAll(response.Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(b).To(BeEmpty())
+			})
+		})
+
+	})
+
 })
 
 func beforeHandler(rw http.ResponseWriter, r *http.Request) *Response {
@@ -328,6 +346,11 @@ func stopExecutionHandler(rw http.ResponseWriter, r *http.Request) *Response {
 	return &Response{
 		StopExecution: true,
 	}
+}
+
+func writeNILHandler(rw http.ResponseWriter, r *http.Request) *Response {
+	WriteJSONResponse(rw, http.StatusOK, nil)
+	return nil
 }
 
 func testFunc() {}
