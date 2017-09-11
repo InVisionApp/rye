@@ -126,9 +126,12 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 				}
 
 				// Write the error out
-				statusCode = strconv.Itoa(resp.StatusCode)
 				WriteJSONStatus(w, "error", resp.Error(), resp.StatusCode)
 			}()
+
+			if resp.StatusCode > 0 {
+				statusCode = strconv.Itoa(resp.StatusCode)
+			}
 		}
 
 		handlerName := getFuncName(handler)
