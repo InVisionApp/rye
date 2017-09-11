@@ -190,7 +190,7 @@ var _ = Describe("Rye", func() {
 				h := mwHandler.Handle([]Handler{stopExecutionWithStatusHandler, successHandler})
 				h.ServeHTTP(response, request)
 
-				Eventually(inc).Should(Receive(&statsInc{"handlers.stopExecutionWithStatusHandler.404", 1, float32(STATRATE)}))
+				Eventually(inc).Should(Receive(Equal(statsInc{"handlers.stopExecutionWithStatusHandler.404", 1, float32(STATRATE)})))
 				Expect(os.Getenv(RYE_TEST_HANDLER_ENV_VAR)).ToNot(Equal("1"))
 			})
 		})
