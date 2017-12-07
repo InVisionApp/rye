@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	//log "github.com/Sirupsen/logrus"
+	//log "github.com/sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 )
 
