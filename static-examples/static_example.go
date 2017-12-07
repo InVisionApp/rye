@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/InVisionApp/rye"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/gorilla/mux"
 )
