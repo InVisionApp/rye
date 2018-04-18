@@ -11,11 +11,12 @@
 A simple library to support http services. Currently, **rye** provides a middleware handler which can be used to chain http handlers together while providing statsd metrics for use with DataDog or other logging aggregators. In addition, **rye** comes with various pre-built middleware handlers for enabling functionality such as CORS and rate/CIDR limiting.
 
 ## Setup
-In order to use **rye**, you should vendor it and the **statsd** client within your project.
+In order to use **rye**, you should vendor it along with the **statsd** and **opentracing** clients within your project.
 
 ```sh 
 govendor fetch github.com/InVisionApp/rye
 govendor fetch github.com/cactus/go-statsd-client/statsd
+govendor fetch github.com/opentracing/opentracing-go
 ```
 
 ## Why another middleware lib?
@@ -44,6 +45,7 @@ Begin by importing the required libraries:
 ```go
 import (
     "github.com/cactus/go-statsd-client/statsd"
+    "github.com/opentracing/opentracing-go"
     "github.com/InVisionApp/rye"
 )
 ```
@@ -55,6 +57,11 @@ config := &rye.Config{
     Statter:  statsdClient,
     StatRate: DEFAULT_STATSD_RATE,
 }
+```
+
+(Optional) Configure your OpenTracing global handler. If not set it will default to a NoOp tracer:
+```go
+opentracing.SetGlobalTracer(tracer)
 ```
 
 Create a middleware handler. The purpose of the Handler is to keep Config and to provide an interface for chaining http handlers.
