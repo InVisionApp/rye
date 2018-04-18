@@ -13,6 +13,7 @@ import (
 
 	//log "github.com/sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
+	"github.com/opentracing/opentracing-go"
 )
 
 //go:generate counterfeiter -o fakes/statsdfakes/fake_statter.go $GOPATH/src/github.com/cactus/go-statsd-client/statsd/client.go Statter
@@ -75,6 +76,22 @@ func (m *MWHandler) Use(handler Handler) {
 // It returns a http.HandlerFunc from net/http that can be set as a route in your http server.
 func (m *MWHandler) Handle(customHandlers []Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Look for the request caller's SpanContext in the headers
+		// If not found create a new SpanContext
+		carrier := opentracing.HTTPHeadersCarrier(r.Header)
+		parentSpanContext, _ := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders, carrier)
+
+		var span opentracing.Span
+		operationName := r.Method + " " + r.RequestURI
+		if parentSpanContext == nil {
+			span = opentracing.StartSpan(operationName)
+		} else {
+			span = opentracing.StartSpan(operationName, opentracing.ChildOf(parentSpanContext))
+		}
+		defer span.Finish()
+		r = r.WithContext(opentracing.ContextWithSpan(r.Context(), span))
+
 		exit := false
 		for _, handler := range m.beforeHandlers {
 			exit, r = m.do(w, r, handler)
