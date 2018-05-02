@@ -4,15 +4,18 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
+
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 /*
 NewMiddlewareAuth creates a new middleware to extract the Authorization header
 from a request and validate it. It accepts a func of type AuthFunc which is
 used to do the credential validation.
-An AuthFunc for Basic auth is provided here.
+An AuthFuncs for Basic auth and JWT are provided here.
 
 Example usage:
 
@@ -83,14 +86,15 @@ func (b basicAuth) authenticate(ctx context.Context, auth string) *Response {
 	}
 }
 
+const basicPrefix = "Basic "
+
 // parseBasicAuth parses an HTTP Basic Authentication string.
 // taken from net/http/request.go
 func parseBasicAuth(auth string) (username, password string, ok bool) {
-	const prefix = "Basic "
-	if !strings.HasPrefix(auth, prefix) {
+	if !strings.HasPrefix(auth, basicPrefix) {
 		return
 	}
-	c, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
+	c, err := base64.StdEncoding.DecodeString(auth[len(basicPrefix):])
 	if err != nil {
 		return
 	}
@@ -100,4 +104,48 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 		return
 	}
 	return cs[:s], cs[s+1:], true
+}
+
+/****
+ JWT
+****/
+
+type jwtAuth struct {
+	secret string
+}
+
+func NewJWTAuthFunc(secret string) AuthFunc {
+	j := &jwtAuth{secret: secret}
+	return j.authenticate
+}
+
+const bearerPrefix = "Bearer "
+
+func (j *jwtAuth) authenticate(ctx context.Context, auth string) *Response {
+	// Remove 'Bearer' prefix
+	if !strings.HasPrefix(auth, bearerPrefix) && !strings.HasPrefix(auth, strings.ToLower(bearerPrefix)) {
+		return &Response{
+			Err:        errors.New("unauthorized: invalid authentication provided"),
+			StatusCode: http.StatusUnauthorized,
+		}
+	}
+
+	token := auth[len(bearerPrefix):]
+
+	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method")
+		}
+		return []byte(j.secret), nil
+	})
+	if err != nil {
+		return &Response{
+			Err:        err,
+			StatusCode: http.StatusUnauthorized,
+		}
+	}
+
+	return &Response{
+		Context: context.WithValue(ctx, CONTEXT_JWT, token),
+	}
 }
