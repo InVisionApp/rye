@@ -1,13 +1,6 @@
 package rye
 
-import (
-	"context"
-	"fmt"
-	"net/http"
-	"regexp"
-
-	"github.com/dgrijalva/jwt-go"
-)
+import "net/http"
 
 const (
 	CONTEXT_JWT = "rye-middlewarejwt-jwt"
@@ -19,6 +12,12 @@ type jwtVerify struct {
 }
 
 /*
+This middleware is deprecated. Use NewMiddlewareAuth with NewJWTAuthFunc instead.
+
+This remains here as a shim for backwards compatibility.
+
+---------------------------------------------------------------------------
+
 This middleware provides JWT verification functionality
 
 You can use this middleware by specifying `rye.NewMiddlewareJWT(shared_secret)`
@@ -53,40 +52,5 @@ Access to that is simple (using the CONTEXT_JWT constant as a key)
 
 */
 func NewMiddlewareJWT(secret string) func(rw http.ResponseWriter, req *http.Request) *Response {
-	j := &jwtVerify{secret: secret}
-	return j.handle
-}
-
-func (j *jwtVerify) handle(rw http.ResponseWriter, req *http.Request) *Response {
-
-	tokenHeader := req.Header.Get("Authorization")
-
-	if tokenHeader == "" {
-		return &Response{
-			Err:        fmt.Errorf("JWT token must be passed with Authorization header"),
-			StatusCode: 400,
-		}
-	}
-
-	// Remove 'Bearer' prefix
-	p, _ := regexp.Compile(`(?i)bearer\s+`)
-	j.token = p.ReplaceAllString(tokenHeader, "")
-
-	_, err := jwt.Parse(j.token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method")
-		}
-		return []byte(j.secret), nil
-	})
-
-	if err != nil {
-		return &Response{
-			Err:        err,
-			StatusCode: 401,
-		}
-	}
-
-	ctx := context.WithValue(req.Context(), CONTEXT_JWT, j.token)
-
-	return &Response{Context: ctx}
+	return NewMiddlewareAuth(NewJWTAuthFunc(secret))
 }

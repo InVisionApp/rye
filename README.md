@@ -226,7 +226,7 @@ the example using Gorilla:
 | [Access Token](middleware_accesstoken.go)   | Provide Access Token validation   |
 | [CIDR](middleware_cidr.go) | Provide request IP whitelisting       |
 | [CORS](middleware_cors.go) | Provide CORS functionality for routes |
-| [JWT](middleware_jwt.go)   | Provide JWT validation                |
+| [Auth](middleware_auth.go)   | Provide Authorization header validation (basic auth, JWT)   |
 | [Route Logger](middleware_routelogger.go)   | Provide basic logging for a specific route |
 | [Static File](middleware_static_file.go) | Provides serving a single file |
 | [Static Filesystem](middleware_static_filesystem.go) | Provides serving a single file |
@@ -234,7 +234,7 @@ the example using Gorilla:
 
 ### A Note on the JWT Middleware
 
-The [JWT Middleware](middleware_jwt.go) pushes the JWT token onto the Context for use by other middlewares in the chain. This is a convenience that allows any part of your middleware chain quick access to the JWT. Example usage might include a middleware that needs access to your user id or email address stored in the JWT. To access this `Context` variable, the code is very simple:
+The [JWT Middleware](middleware_auth.go) pushes the JWT token onto the Context for use by other middlewares in the chain. This is a convenience that allows any part of your middleware chain quick access to the JWT. Example usage might include a middleware that needs access to your user id or email address stored in the JWT. To access this `Context` variable, the code is very simple:
 ```go
 func getJWTfromContext(rw http.ResponseWriter, r *http.Request) *rye.Response {
     // Retrieving the value is easy!

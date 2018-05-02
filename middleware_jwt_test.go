@@ -35,13 +35,21 @@ var _ = Describe("JWT Middleware", func() {
 				Expect(resp.Context).ToNot(BeNil())
 				Expect(resp.Context.Value(CONTEXT_JWT)).To(Equal(hs256_jwt))
 			})
+
+			It("lower case bearer is also accepted", func() {
+				request.Header.Add("Authorization", fmt.Sprintf("bearer %s", hs256_jwt))
+				resp := NewMiddlewareJWT(shared_secret)(response, request)
+				Expect(resp).ToNot(BeNil())
+				Expect(resp.Context).ToNot(BeNil())
+				Expect(resp.Context.Value(CONTEXT_JWT)).To(Equal(hs256_jwt))
+			})
 		})
 
 		Context("when no token is passed", func() {
 			It("should return an error", func() {
 				resp := NewMiddlewareJWT(shared_secret)(response, request)
 				Expect(resp).ToNot(BeNil())
-				Expect(resp.Error()).To(ContainSubstring("JWT token must be passed"))
+				Expect(resp.Error()).To(ContainSubstring("no authentication provided"))
 			})
 		})
 
@@ -60,6 +68,15 @@ var _ = Describe("JWT Middleware", func() {
 				resp := NewMiddlewareJWT(shared_secret)(response, request)
 				Expect(resp).ToNot(BeNil())
 				Expect(resp.Error()).To(ContainSubstring("signing method"))
+			})
+		})
+
+		Context("token with wrong header format", func() {
+			It("should return an error", func() {
+				request.Header.Add("Authorization", fmt.Sprintf("foo %s", rs256_jwt))
+				resp := NewMiddlewareJWT(shared_secret)(response, request)
+				Expect(resp).ToNot(BeNil())
+				Expect(resp.Error()).To(ContainSubstring("invalid authentication"))
 			})
 		})
 	})

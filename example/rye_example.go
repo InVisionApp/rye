@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/InVisionApp/rye"
-	log "github.com/sirupsen/logrus"
 	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -42,10 +42,21 @@ func main() {
 	})).Methods("GET", "OPTIONS")
 
 	// If you perform an `curl -i http://localhost:8181/jwt \
+	// -H "Authorization: Basic dXNlcjE6cGFzczEK"
+	// you will see that we are allowed through to the handler, if the header is changed, you will get a 401
+	routes.Handle("/basic-auth", middlewareHandler.Handle([]rye.Handler{
+		rye.NewMiddlewareAuth(rye.NewBasicAuthFunc(map[string]string{
+			"user1": "pass1",
+			"user2": "pass2",
+		})),
+		getJwtFromContextHandler,
+	})).Methods("GET")
+
+	// If you perform an `curl -i http://localhost:8181/jwt \
 	// -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
 	// you will see that we are allowed through to the handler, if the sample token is changed, we will get a 401
 	routes.Handle("/jwt", middlewareHandler.Handle([]rye.Handler{
-		rye.NewMiddlewareJWT("secret"),
+		rye.NewMiddlewareAuth(rye.NewJWTAuthFunc("secret")),
 		getJwtFromContextHandler,
 	})).Methods("GET")
 
