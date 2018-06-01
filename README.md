@@ -5,6 +5,7 @@
 [![Travis Build Status](https://travis-ci.com/InVisionApp/rye.svg?token=qgpSBc6cjHgbnjqC45af&branch=master)](https://travis-ci.com/InVisionApp/rye)
 [![codecov](https://codecov.io/gh/InVisionApp/rye/branch/master/graph/badge.svg?token=hhqA1l88kx)](https://codecov.io/gh/InVisionApp/rye)
 
+<img align="left" src="images/rye-gopher.svg" width="200">
 <img align="right" src="images/rye_logo_invision_pink.png">
 
 # rye
