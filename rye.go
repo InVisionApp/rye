@@ -28,6 +28,11 @@ type MWHandler struct {
 type Config struct {
 	Statter  statsd.Statter
 	StatRate float32
+
+	// toggle types of stats sent
+	NoErrStats        bool
+	NoDurationStats   bool
+	NoStatusCodeStats bool
 }
 
 // JSONStatus is a simple container used for conveying status messages.
@@ -122,7 +127,7 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 
 				// Now assume we have an error.
 				if m.Config.Statter != nil && resp.StatusCode >= 500 {
-					go m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
+					go m.reportError()
 				}
 
 				// Write the error out
@@ -138,18 +143,10 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 
 		if m.Config.Statter != nil {
 			// Record runtime metric
-			go m.Config.Statter.TimingDuration(
-				"handlers."+handlerName+".runtime",
-				time.Since(startTime), // delta
-				m.Config.StatRate,
-			)
+			go m.reportDuration(handlerName, startTime)
 
 			// Record status code metric (default 2xx)
-			go m.Config.Statter.Inc(
-				"handlers."+handlerName+"."+statusCode,
-				1,
-				m.Config.StatRate,
-			)
+			go m.reportStatusCode(handlerName, statusCode)
 		}
 	}()
 
@@ -160,6 +157,38 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 	}
 
 	return false, r
+}
+
+func (m *MWHandler) reportError() {
+	if m.Config.NoErrStats {
+		return
+	}
+
+	m.Config.Statter.Inc("errors", 1, m.Config.StatRate)
+}
+
+func (m *MWHandler) reportDuration(handlerName string, startTime time.Time) {
+	if m.Config.NoDurationStats {
+		return
+	}
+
+	m.Config.Statter.TimingDuration(
+		"handlers."+handlerName+".runtime",
+		time.Since(startTime), // delta
+		m.Config.StatRate,
+	)
+}
+
+func (m *MWHandler) reportStatusCode(handlerName string, statusCode string) {
+	if m.Config.NoStatusCodeStats {
+		return
+	}
+
+	m.Config.Statter.Inc(
+		"handlers."+handlerName+"."+statusCode,
+		1,
+		m.Config.StatRate,
+	)
 }
 
 // WriteJSONStatus is a wrapper for WriteJSONResponse that returns a marshalled JSONStatus blob

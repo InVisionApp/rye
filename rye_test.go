@@ -267,6 +267,68 @@ var _ = Describe("Rye", func() {
 			})
 		})
 
+		Context("when error stats are turned off", func() {
+			It("should not call Inc or TimingDuration", func() {
+				ryeConfig := Config{
+					Statter:    fakeStatter,
+					NoErrStats: true,
+				}
+
+				handler := NewMWHandler(ryeConfig)
+				//use the failureHandler so an error would be reported
+				h := handler.Handle([]Handler{failureHandler})
+				h.ServeHTTP(response, request)
+
+				time.Sleep(time.Millisecond * 10)
+
+				Expect(fakeStatter.IncCallCount()).To(Equal(1))
+				metric, _, _ := fakeStatter.IncArgsForCall(0)
+				Expect(metric).ToNot(Equal("errors"))
+
+				Expect(fakeStatter.TimingDurationCallCount()).To(Equal(1))
+			})
+		})
+
+		Context("when statusCode stats are turned off", func() {
+			It("should not call Inc or TimingDuration", func() {
+				ryeConfig := Config{
+					Statter:           fakeStatter,
+					NoStatusCodeStats: true,
+				}
+
+				handler := NewMWHandler(ryeConfig)
+				//use the failureHandler so an error would be reported
+				h := handler.Handle([]Handler{failureHandler})
+				h.ServeHTTP(response, request)
+
+				time.Sleep(time.Millisecond * 10)
+
+				Expect(fakeStatter.IncCallCount()).To(Equal(1))
+				metric, _, _ := fakeStatter.IncArgsForCall(0)
+				Expect(metric).ToNot(ContainSubstring("handlers."))
+
+				Expect(fakeStatter.TimingDurationCallCount()).To(Equal(1))
+			})
+		})
+
+		Context("when timming stats are turned off", func() {
+			It("should not call Inc or TimingDuration", func() {
+				ryeConfig := Config{
+					Statter:         fakeStatter,
+					NoDurationStats: true,
+				}
+
+				handler := NewMWHandler(ryeConfig)
+				//use the failureHandler so an error would be reported
+				h := handler.Handle([]Handler{failureHandler})
+				h.ServeHTTP(response, request)
+
+				time.Sleep(time.Millisecond * 10)
+
+				Expect(fakeStatter.TimingDurationCallCount()).To(Equal(0))
+				Expect(fakeStatter.IncCallCount()).To(Equal(2))
+			})
+		})
 	})
 
 	Describe("getFuncName", func() {
