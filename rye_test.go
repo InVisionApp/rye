@@ -36,16 +36,32 @@ type statsTiming struct {
 	StatRate float32
 }
 
+var reportedStats = make(chan fakeReportedStats)
+
+type fakeReportedStats struct {
+	Duration time.Duration
+	Request  *http.Request
+	Response *Response
+}
+
+type fakeCustomStatter struct{}
+
+func (fcs *fakeCustomStatter) ReportStats(dur time.Duration, req *http.Request, res *Response) error {
+	reportedStats <- fakeReportedStats{dur, req, res}
+	return nil
+}
+
 var _ = Describe("Rye", func() {
 
 	var (
-		request     *http.Request
-		response    *httptest.ResponseRecorder
-		mwHandler   *MWHandler
-		ryeConfig   Config
-		fakeStatter *statsdfakes.FakeStatter
-		inc         chan statsInc
-		timing      chan statsTiming
+		request           *http.Request
+		response          *httptest.ResponseRecorder
+		mwHandler         *MWHandler
+		ryeConfig         Config
+		fakeStatter       *statsdfakes.FakeStatter
+		fakeClientStatter *fakeCustomStatter
+		inc               chan statsInc
+		timing            chan statsTiming
 	)
 
 	const (
@@ -54,6 +70,7 @@ var _ = Describe("Rye", func() {
 
 	BeforeEach(func() {
 		fakeStatter = &statsdfakes.FakeStatter{}
+		fakeClientStatter = &fakeCustomStatter{}
 		ryeConfig = Config{
 			Statter:  fakeStatter,
 			StatRate: STATRATE,
@@ -81,7 +98,6 @@ var _ = Describe("Rye", func() {
 			timing <- statsTiming{name, time, statrate}
 			return nil
 		}
-
 	})
 
 	AfterEach(func() {
@@ -329,6 +345,62 @@ var _ = Describe("Rye", func() {
 				Expect(fakeStatter.IncCallCount()).To(Equal(2))
 			})
 		})
+
+		Context("when a custom statter is supplied", func() {
+			It("should call the ReportStats method", func() {
+				ryeConfig := Config{
+					Statter:       fakeStatter,
+					StatRate:      STATRATE,
+					CustomStatter: fakeClientStatter,
+				}
+
+				handler := NewMWHandler(ryeConfig)
+				h := handler.Handle([]Handler{successWithResponse})
+				h.ServeHTTP(response, request)
+
+				Expect(h).ToNot(BeNil())
+				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
+
+				Eventually(inc).Should(Receive(Equal(statsInc{"handlers.successWithResponse.200", 1, float32(STATRATE)})))
+				Eventually(timing).Should(Receive(HaveTiming("handlers.successWithResponse.runtime", float32(STATRATE))))
+
+				var receivedReportedStats fakeReportedStats
+				var resp *Response
+
+				Eventually(reportedStats).Should(Receive(&receivedReportedStats))
+				Expect(receivedReportedStats.Duration.Seconds()/1000 > 0).To(Equal(true))
+				Expect(receivedReportedStats.Request).To(BeAssignableToTypeOf(request))
+				Expect(receivedReportedStats.Response).To(BeAssignableToTypeOf(resp))
+				Expect(receivedReportedStats.Response.StatusCode).To(Equal(200))
+			})
+		})
+
+		Context("when a custom statter is NOT supplied", func() {
+			It("should not call the ReportStats method", func() {
+				ryeConfig := Config{
+					Statter:  fakeStatter,
+					StatRate: STATRATE,
+				}
+
+				handler := NewMWHandler(ryeConfig)
+				h := handler.Handle([]Handler{successWithResponse})
+				h.ServeHTTP(response, request)
+
+				Expect(h).ToNot(BeNil())
+				Expect(h).To(BeAssignableToTypeOf(func(http.ResponseWriter, *http.Request) {}))
+
+				Eventually(inc).Should(Receive(Equal(statsInc{"handlers.successWithResponse.200", 1, float32(STATRATE)})))
+				Eventually(timing).Should(Receive(HaveTiming("handlers.successWithResponse.runtime", float32(STATRATE))))
+
+				time.Sleep(time.Millisecond * 10)
+
+				var receivedReportedStats fakeReportedStats
+
+				Expect(receivedReportedStats.Duration.Nanoseconds()).To(Equal(int64(0)))
+				Expect(receivedReportedStats.Request).To(BeNil())
+				Expect(receivedReportedStats.Response).To(BeNil())
+			})
+		})
 	})
 
 	Describe("getFuncName", func() {
@@ -383,6 +455,15 @@ func successHandler(rw http.ResponseWriter, r *http.Request) *Response {
 func success2Handler(rw http.ResponseWriter, r *http.Request) *Response {
 	os.Setenv(RYE_TEST_HANDLER_2_ENV_VAR, "1")
 	return nil
+}
+
+func successWithResponse(rw http.ResponseWriter, r *http.Request) *Response {
+	return &Response{
+		StatusCode:    200,
+		Err:           nil,
+		StopExecution: false,
+		Context:       context.Background(),
+	}
 }
 
 func badResponseHandler(rw http.ResponseWriter, r *http.Request) *Response {

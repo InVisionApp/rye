@@ -12,6 +12,7 @@ import (
 	"time"
 
 	//log "github.com/sirupsen/logrus"
+
 	"github.com/cactus/go-statsd-client/statsd"
 )
 
@@ -24,6 +25,12 @@ type MWHandler struct {
 	beforeHandlers []Handler
 }
 
+// CustomStatter allows the client to log any additional statsD metrics Rye
+// computes around the request handler.
+type CustomStatter interface {
+	ReportStats(time.Duration, *http.Request, *Response) error
+}
+
 // Config struct allows you to set a reference to a statsd.Statter and include it's stats rate.
 type Config struct {
 	Statter  statsd.Statter
@@ -33,6 +40,9 @@ type Config struct {
 	NoErrStats        bool
 	NoDurationStats   bool
 	NoStatusCodeStats bool
+
+	// Customer Statter for the client
+	CustomStatter CustomStatter
 }
 
 // JSONStatus is a simple container used for conveying status messages.
@@ -147,6 +157,12 @@ func (m *MWHandler) do(w http.ResponseWriter, r *http.Request, handler Handler) 
 
 			// Record status code metric (default 2xx)
 			go m.reportStatusCode(handlerName, statusCode)
+		}
+
+		// If a CustomStatter is set, send the handler metrics to it.
+		// This allows the client to handle these metrics however it wants.
+		if m.Config.CustomStatter != nil && resp != nil {
+			go m.Config.CustomStatter.ReportStats(time.Since(startTime), r, resp)
 		}
 	}()
 
