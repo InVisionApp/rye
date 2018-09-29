@@ -31,7 +31,7 @@ var _ = Describe("Static File Middleware", func() {
 			It("should return a response", func() {
 				path = "/static-examples/dist/"
 
-				request, _ := http.NewRequest("GET", "/dist/test.html", nil)
+				request, _ = http.NewRequest("GET", "/dist/test.html", nil)
 
 				resp := NewStaticFilesystem(testPath+path, "/dist/")(response, request)
 				Expect(resp).To(BeNil())
