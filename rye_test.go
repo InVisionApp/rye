@@ -39,15 +39,16 @@ type statsTiming struct {
 var reportedStats = make(chan fakeReportedStats)
 
 type fakeReportedStats struct {
-	Duration time.Duration
-	Request  *http.Request
-	Response *Response
+	HandlerName string
+	Duration    time.Duration
+	Request     *http.Request
+	Response    *Response
 }
 
 type fakeCustomStatter struct{}
 
-func (fcs *fakeCustomStatter) ReportStats(dur time.Duration, req *http.Request, res *Response) error {
-	reportedStats <- fakeReportedStats{dur, req, res}
+func (fcs *fakeCustomStatter) ReportStats(handler string, dur time.Duration, req *http.Request, res *Response) error {
+	reportedStats <- fakeReportedStats{handler, dur, req, res}
 	return nil
 }
 
@@ -368,6 +369,7 @@ var _ = Describe("Rye", func() {
 				var resp *Response
 
 				Eventually(reportedStats).Should(Receive(&receivedReportedStats))
+				Expect(receivedReportedStats.HandlerName).To(Equal("successWithResponse"))
 				Expect(receivedReportedStats.Duration.Seconds()/1000 > 0).To(Equal(true))
 				Expect(receivedReportedStats.Request).To(BeAssignableToTypeOf(request))
 				Expect(receivedReportedStats.Response).To(BeAssignableToTypeOf(resp))
@@ -396,6 +398,7 @@ var _ = Describe("Rye", func() {
 
 				var receivedReportedStats fakeReportedStats
 
+				Expect(receivedReportedStats.HandlerName).To(Equal(""))
 				Expect(receivedReportedStats.Duration.Nanoseconds()).To(Equal(int64(0)))
 				Expect(receivedReportedStats.Request).To(BeNil())
 				Expect(receivedReportedStats.Response).To(BeNil())
