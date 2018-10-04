@@ -28,7 +28,7 @@ type MWHandler struct {
 // CustomStatter allows the client to log any additional statsD metrics Rye
 // computes around the request handler.
 type CustomStatter interface {
-	ReportStats(string, time.Duration, *http.Request, *Response) error
+	ReportStats(handlerName string, elapsedTime time.Duration, req *http.Request, resp *Response) error
 }
 
 // Config struct allows you to set a reference to a statsd.Statter and include it's stats rate.
