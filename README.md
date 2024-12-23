@@ -1,3 +1,6 @@
+| :warning: This project is no longer actively supported.
+| ---
+
 [![LICENSE](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 [![Golang](https://img.shields.io/badge/Golang-v1.7-blue.svg)](https://golang.org/dl/)
 [![Godocs](https://img.shields.io/badge/golang-documentation-blue.svg)](https://godoc.org/github.com/InVisionApp/rye)
